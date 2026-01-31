@@ -6,6 +6,7 @@ import '../models/child.dart';
 import '../repositories/photo_repository.dart';
 import '../repositories/cloud_photo_repository.dart';
 import 'comparison_screen.dart';
+import 'growth_stats_screen.dart';
 import 'timeline_screen.dart';
 import 'timeline_movie_screen.dart';
 
@@ -192,6 +193,31 @@ class _ChildPageState extends State<ChildPage> {
                           ),
                         );
                         _hasChanges = true;
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.bar_chart_rounded),
+                      label: const Text(
+                        'Growth Stats',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      onPressed: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => GrowthStatsScreen(
+                              childId: child.localId,
+                              childName: child.name,
+                            ),
+                          ),
+                        );
                       },
                     ),
                   ),
