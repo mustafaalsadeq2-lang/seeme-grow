@@ -69,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (!mounted) return;
     setState(() => _children = children);
+    NotificationService.scheduleAll();
   }
 
   // ---------------------------------------------------------------------------
@@ -142,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (result != null) {
       await LocalStorageService.addChild(result);
+      await NotificationService.scheduleAll();
       _loadChildren();
     }
   }
@@ -182,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     if (confirm == true) {
+      await NotificationService.cancelForChild(child.localId);
       await LocalStorageService.deleteChild(child.localId);
       _loadChildren();
     }

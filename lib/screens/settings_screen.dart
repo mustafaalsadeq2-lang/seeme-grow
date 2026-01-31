@@ -1,8 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class SettingsScreen extends StatelessWidget {
+import '../services/notification_service.dart';
+
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _notificationsEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationSettings();
+  }
+
+  Future<void> _loadNotificationSettings() async {
+    final enabled = await NotificationService.isEnabled();
+    if (!mounted) return;
+    setState(() => _notificationsEnabled = enabled);
+  }
+
+  Future<void> _toggleNotifications(bool value) async {
+    setState(() => _notificationsEnabled = value);
+    await NotificationService.setEnabled(value);
+  }
 
   Future<void> _handleLogout(BuildContext context) async {
     final confirm = await showDialog<bool>(
@@ -65,6 +91,20 @@ class SettingsScreen extends StatelessWidget {
                 color: Colors.grey,
                 fontSize: 13,
               ),
+            ),
+            onTap: null,
+          ),
+
+          const SizedBox(height: 12),
+
+          // 🔹 Notifications
+          _SettingsCard(
+            icon: Icons.notifications_outlined,
+            title: 'Birthday Reminders',
+            subtitle: "Get notified before your child's birthday",
+            trailing: Switch(
+              value: _notificationsEnabled,
+              onChanged: _toggleNotifications,
             ),
             onTap: null,
           ),
@@ -154,11 +194,11 @@ class _SettingsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
-        enabled: onTap != null,
+        enabled: onTap != null || trailing is Switch,
         onTap: onTap,
         leading: Icon(
           icon,
-          color: onTap == null
+          color: (onTap == null && trailing is! Switch)
               ? Colors.grey
               : (icon == Icons.logout ? Colors.red : Colors.purple),
         ),

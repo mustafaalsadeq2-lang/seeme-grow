@@ -137,36 +137,41 @@ class _ChildPageState extends State<ChildPage> {
 
                   if (_hasPhotos) const SizedBox(height: 16),
 
-                  if (_photoCount >= 2)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.compare_arrows),
-                        label: const Text(
-                          'Compare Growth',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ComparisonScreen(
-                                childId: child.localId,
-                                childName: child.name,
-                              ),
-                            ),
-                          );
-                          _hasChanges = true;
-                        },
+                  // DEBUG: temporarily always visible for testing
+                  Builder(builder: (_) {
+                    debugPrint('DEBUG: _photoCount=$_photoCount');
+                    return const SizedBox.shrink();
+                  }),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.compare_arrows),
+                      label: const Text(
+                        'Compare Growth',
+                        style: TextStyle(fontSize: 16),
                       ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        debugPrint('DEBUG: Compare Growth tapped, childId=${child.localId}');
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ComparisonScreen(
+                              childId: child.localId,
+                              childName: child.name,
+                            ),
+                          ),
+                        );
+                        _hasChanges = true;
+                      },
                     ),
+                  ),
 
-                  if (_photoCount >= 2) const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
                   SizedBox(
                     width: double.infinity,

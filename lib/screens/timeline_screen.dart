@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../models/child.dart';
 import '../storage/local_storage_service.dart';
+import 'comparison_screen.dart';
 import 'timeline_movie_screen.dart';
 import 'year_detail_screen.dart';
 
@@ -295,6 +296,22 @@ class _TimelineScreenState extends State<TimelineScreen>
       appBar: AppBar(
         title: Text('${child.name} Timeline'),
         actions: [
+          if (_completedYears >= 2)
+            IconButton(
+              icon: const Icon(Icons.compare_arrows),
+              tooltip: 'Compare Growth',
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ComparisonScreen(
+                      childId: widget.childId,
+                      childName: child.name,
+                    ),
+                  ),
+                );
+              },
+            ),
           if (_completedYears > 0)
             IconButton(
               icon: const Icon(Icons.play_circle_fill),

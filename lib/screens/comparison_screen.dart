@@ -78,16 +78,33 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
   Future<void> _loadChild() async {
     final children = await LocalStorageService.loadChildren();
-    final child =
-        children.firstWhere((c) => c.localId == widget.childId);
+    final match = children.where((c) => c.localId == widget.childId);
 
     if (!mounted) return;
 
-    final available = child.yearPhotos.entries
-        .where((e) => e.value.trim().isNotEmpty)
-        .map((e) => e.key)
-        .toList()
-      ..sort();
+    if (match.isEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    final child = match.first;
+
+    debugPrint('DEBUG: childId=${widget.childId}');
+    debugPrint('DEBUG: total yearPhotos=${child.yearPhotos.length}');
+
+    // Filter to years that have a real photo file on disk
+    final available = <int>[];
+    for (final entry in child.yearPhotos.entries) {
+      final path = entry.value.trim();
+      final exists = path.isNotEmpty && File(path).existsSync();
+      debugPrint('DEBUG: year=${entry.key}, path=$path, exists=$exists');
+      if (exists) {
+        available.add(entry.key);
+      }
+    }
+    available.sort();
+
+    debugPrint('DEBUG: validPhotos (with file on disk)=${available.length}');
 
     setState(() {
       _child = child;
@@ -96,16 +113,21 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       _rightYear = available.length >= 2 ? available.last : _leftYear;
     });
 
-    _entryController.forward();
+    if (available.length >= 2) {
+      _entryController.forward();
+    }
   }
 
   List<int> get _availableYears {
     if (_child == null) return [];
-    final years = _child!.yearPhotos.entries
-        .where((e) => e.value.trim().isNotEmpty)
-        .map((e) => e.key)
-        .toList()
-      ..sort();
+    final years = <int>[];
+    for (final entry in _child!.yearPhotos.entries) {
+      final path = entry.value.trim();
+      if (path.isNotEmpty && File(path).existsSync()) {
+        years.add(entry.key);
+      }
+    }
+    years.sort();
     return years;
   }
 
@@ -116,7 +138,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
   bool _yearHasPhoto(int year) {
     final path = _child?.yearPhotos[year];
-    return path != null && path.trim().isNotEmpty;
+    if (path == null || path.trim().isEmpty) return false;
+    return File(path).existsSync();
   }
 
   Future<void> _shareComparison() async {
@@ -204,6 +227,15 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
         cacheWidth: 540,
+        errorBuilder: (_, __, ___) => Container(
+          decoration: BoxDecoration(
+            color: Colors.white24,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
+          ),
+        ),
       ),
     );
   }
@@ -304,7 +336,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                   size: 64, color: Colors.grey.shade400),
               const SizedBox(height: 16),
               const Text(
-                'Add at least 2 year photos\nto compare growth',
+                'Add at least 2 photos\nto compare growth',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
