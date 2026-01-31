@@ -206,9 +206,13 @@ class _YearDetailScreenState extends State<YearDetailScreen>
                   child: Stack(
                     children: [
                       Positioned.fill(
-                        child: Container(
-                          color: Colors.black,
-                          child: Center(child: _buildImage()),
+                        child: Hero(
+                          tag:
+                              'year_photo_${widget.child.localId}_${widget.year}',
+                          child: Container(
+                            color: Colors.black,
+                            child: Center(child: _buildImage()),
+                          ),
                         ),
                       ),
                       if (_loading)

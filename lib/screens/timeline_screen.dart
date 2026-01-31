@@ -30,6 +30,9 @@ class _TimelineScreenState extends State<TimelineScreen>
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
 
+  late AnimationController _shimmerController;
+  late AnimationController _listController;
+
   @override
   void initState() {
     super.initState();
@@ -44,12 +47,24 @@ class _TimelineScreenState extends State<TimelineScreen>
       curve: Curves.easeOutCubic,
     );
 
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+
+    _listController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
     _loadChild(initial: true);
   }
 
   @override
   void dispose() {
     _progressController.dispose();
+    _shimmerController.dispose();
+    _listController.dispose();
     super.dispose();
   }
 
@@ -78,6 +93,7 @@ class _TimelineScreenState extends State<TimelineScreen>
     });
 
     _progressController.forward(from: 0);
+    _listController.forward(from: 0);
   }
 
   int get _currentYear {
@@ -132,26 +148,142 @@ class _TimelineScreenState extends State<TimelineScreen>
     );
   }
 
+  Route _createRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: const Duration(milliseconds: 400),
+      reverseTransitionDuration: const Duration(milliseconds: 350),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.08),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Route<String> _createZoomRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: const Duration(milliseconds: 300),
+      reverseTransitionDuration: const Duration(milliseconds: 250),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOut,
+            reverseCurve: Curves.easeIn,
+          ),
+          child: child,
+        );
+      },
+    );
+  }
+
+  Animation<double> _itemAnimation(int index) {
+    final start = (index * 0.04).clamp(0.0, 0.6);
+    final end = (start + 0.4).clamp(0.0, 1.0);
+    return CurvedAnimation(
+      parent: _listController,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+  }
+
+  Widget _buildShimmerSkeleton() {
+    return AnimatedBuilder(
+      animation: _shimmerController,
+      builder: (context, child) {
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              colors: [
+                Colors.grey.shade300,
+                Colors.grey.shade100,
+                Colors.grey.shade300,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+              transform:
+                  _SlidingGradientTransform(_shimmerController.value),
+            ).createShader(bounds);
+          },
+          child: child!,
+        );
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 6,
+        itemBuilder: (_, index) => Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          height: 88,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 150,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 🔹 Loading Skeleton (احترافي – بدون شاشة بيضاء)
     if (_loading || _child == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Timeline')),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: ListView.builder(
-            itemCount: 6,
-            itemBuilder: (_, __) => Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              height: 88,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ),
+        body: _buildShimmerSkeleton(),
       );
     }
 
@@ -170,9 +302,7 @@ class _TimelineScreenState extends State<TimelineScreen>
               onPressed: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => TimelineMovieScreen(child: child),
-                  ),
+                  _createRoute(TimelineMovieScreen(child: child)),
                 );
               },
             ),
@@ -212,6 +342,7 @@ class _TimelineScreenState extends State<TimelineScreen>
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: 19,
+              cacheExtent: 400,
               itemBuilder: (context, year) {
                 final isBirth = year == 0;
                 final hasPhoto = _hasPhoto(year);
@@ -222,128 +353,181 @@ class _TimelineScreenState extends State<TimelineScreen>
                 final title = isBirth ? 'Birth' : 'Year $year';
                 final enabled = !isFuture;
 
-                return Card(
-                  elevation: isCurrent ? 4 : 1,
-                  color: isCurrent ? Colors.purple.shade50 : null,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                final anim = _itemAnimation(year);
+
+                return AnimatedBuilder(
+                  animation: anim,
+                  builder: (context, cardChild) {
+                    return Opacity(
+                      opacity: anim.value,
+                      child: Transform.translate(
+                        offset: Offset(0, 24 * (1 - anim.value)),
+                        child: cardChild,
+                      ),
+                    );
+                  },
+                  child: _TapScaleCard(
+                    enabled: enabled,
                     onTap: enabled
                         ? () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => YearDetailScreen(
-                                  child: child,
-                                  year: year,
+                            if (hasPhoto) {
+                              final result =
+                                  await Navigator.push<String>(
+                                context,
+                                _createZoomRoute(
+                                  _PhotoZoomScreen(
+                                    imagePath: imagePath!,
+                                    heroTag:
+                                        'year_photo_${widget.childId}_$year',
+                                    title: isBirth
+                                        ? '${child.name} · Birth'
+                                        : '${child.name} · Year $year',
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                              if (result == 'edit' && mounted) {
+                                await Navigator.push(
+                                  context,
+                                  _createRoute(
+                                    YearDetailScreen(
+                                      child: child,
+                                      year: year,
+                                    ),
+                                  ),
+                                );
+                              }
+                            } else {
+                              await Navigator.push(
+                                context,
+                                _createRoute(
+                                  YearDetailScreen(
+                                    child: child,
+                                    year: year,
+                                  ),
+                                ),
+                              );
+                            }
                             _loadChild();
                           }
                         : null,
-                    child: SizedBox(
-                      height: 88,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 88,
-                            height: 88,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                              ),
-                              color: Colors.grey.shade300,
-                            ),
-                            child: hasPhoto
-                                ? ClipRRect(
-                                    borderRadius:
-                                        const BorderRadius.only(
-                                      topLeft: Radius.circular(16),
-                                      bottomLeft: Radius.circular(16),
-                                    ),
-                                    child: Image.file(
-                                      File(imagePath!),
-                                      fit: BoxFit.cover,
-                                      alignment: Alignment.topCenter,
-                                    ),
-                                  )
-                                : Icon(
-                                    isFuture
-                                        ? Icons.lock
-                                        : isBirth
-                                            ? Icons.cake
-                                            : Icons.photo,
-                                    color: Colors.grey,
+                    child: Card(
+                      elevation: isCurrent ? 4 : 1,
+                      color: isCurrent ? Colors.purple.shade50 : null,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: SizedBox(
+                        height: 88,
+                        child: Row(
+                          children: [
+                            Hero(
+                              tag:
+                                  'year_photo_${widget.childId}_$year',
+                              child: Container(
+                                width: 88,
+                                height: 88,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      const BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    bottomLeft: Radius.circular(16),
                                   ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.center,
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade300,
+                                ),
+                                child: hasPhoto
+                                    ? ClipRRect(
+                                        borderRadius:
+                                            const BorderRadius.only(
+                                          topLeft:
+                                              Radius.circular(16),
+                                          bottomLeft:
+                                              Radius.circular(16),
+                                        ),
+                                        child: Image.file(
+                                          File(imagePath!),
+                                          fit: BoxFit.cover,
+                                          alignment:
+                                              Alignment.topCenter,
+                                          cacheWidth: 264,
+                                        ),
+                                      )
+                                    : Icon(
+                                        isFuture
+                                            ? Icons.lock
+                                            : isBirth
+                                                ? Icons.cake
+                                                : Icons.photo,
+                                        color: Colors.grey,
                                       ),
-                                    ),
-                                    if (isCurrent)
-                                      Container(
-                                        margin:
-                                            const EdgeInsets.only(left: 8),
-                                        padding:
-                                            const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.purple,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: const Text(
-                                          'Current',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
+                                      ),
+                                      if (isCurrent)
+                                        Container(
+                                          margin:
+                                              const EdgeInsets.only(
+                                                  left: 8),
+                                          padding:
+                                              const EdgeInsets
+                                                  .symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.purple,
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                                    12),
+                                          ),
+                                          child: const Text(
+                                            'Current',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  hasPhoto
-                                      ? 'Memory saved'
-                                      : isFuture
-                                          ? 'Not available yet'
-                                          : isCurrent
-                                              ? 'Add memory for this year'
-                                              : 'Add memory',
-                                  style: const TextStyle(
-                                    color: Colors.grey,
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    hasPhoto
+                                        ? 'Memory saved'
+                                        : isFuture
+                                            ? 'Not available yet'
+                                            : isCurrent
+                                                ? 'Add memory for this year'
+                                                : 'Add memory',
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.only(right: 12),
-                            child: Icon(Icons.chevron_right),
-                          ),
-                        ],
+                            const Padding(
+                              padding: EdgeInsets.only(right: 12),
+                              child: Icon(Icons.chevron_right),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -353,6 +537,259 @@ class _TimelineScreenState extends State<TimelineScreen>
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tap-scale feedback widget: scales down on press, bounces back on release
+// ---------------------------------------------------------------------------
+class _TapScaleCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  const _TapScaleCard({
+    required this.child,
+    this.onTap,
+    this.enabled = true,
+  });
+
+  @override
+  State<_TapScaleCard> createState() => _TapScaleCardState();
+}
+
+class _TapScaleCardState extends State<_TapScaleCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap?.call();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scale.value,
+            child: child,
+          );
+        },
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Fullscreen photo zoom viewer
+// ---------------------------------------------------------------------------
+class _PhotoZoomScreen extends StatefulWidget {
+  final String imagePath;
+  final String heroTag;
+  final String title;
+
+  const _PhotoZoomScreen({
+    required this.imagePath,
+    required this.heroTag,
+    required this.title,
+  });
+
+  @override
+  State<_PhotoZoomScreen> createState() => _PhotoZoomScreenState();
+}
+
+class _PhotoZoomScreenState extends State<_PhotoZoomScreen>
+    with SingleTickerProviderStateMixin {
+  final TransformationController _transformController =
+      TransformationController();
+  late AnimationController _animController;
+  Animation<Matrix4>? _matrixAnimation;
+  TapDownDetails? _doubleTapDetails;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    )..addListener(() {
+        if (_matrixAnimation != null) {
+          _transformController.value = _matrixAnimation!.value;
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    _transformController.dispose();
+    super.dispose();
+  }
+
+  void _handleDoubleTap() {
+    final currentScale =
+        _transformController.value.getMaxScaleOnAxis();
+
+    final Matrix4 target;
+    if (currentScale > 1.5) {
+      target = Matrix4.identity();
+    } else {
+      const scale = 3.0;
+      final pos = _doubleTapDetails!.localPosition;
+      final x = -pos.dx * (scale - 1);
+      final y = -pos.dy * (scale - 1);
+      target = Matrix4.identity()
+        ..translateByDouble(x, y, 0.0, 0.0)
+        ..scaleByDouble(scale, scale, 1.0, 1.0);
+    }
+
+    _matrixAnimation = Matrix4Tween(
+      begin: _transformController.value,
+      end: target,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    ));
+    _animController.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.of(context).padding;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onDoubleTapDown: (d) => _doubleTapDetails = d,
+              onDoubleTap: _handleDoubleTap,
+              child: InteractiveViewer(
+                transformationController: _transformController,
+                minScale: 1.0,
+                maxScale: 5.0,
+                child: Center(
+                  child: Hero(
+                    tag: widget.heroTag,
+                    child: Image.file(
+                      File(widget.imagePath),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Close button – top left
+          Positioned(
+            top: padding.top + 12,
+            left: 12,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+
+          // Edit button – top right
+          Positioned(
+            top: padding.top + 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context, 'edit'),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.edit,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+
+          // Title – bottom center
+          Positioned(
+            bottom: padding.bottom + 28,
+            left: 24,
+            right: 24,
+            child: Text(
+              widget.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gradient transform for shimmer animation
+// ---------------------------------------------------------------------------
+class _SlidingGradientTransform extends GradientTransform {
+  final double percent;
+
+  const _SlidingGradientTransform(this.percent);
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(
+      bounds.width * (2 * percent - 1),
+      0,
+      0,
     );
   }
 }

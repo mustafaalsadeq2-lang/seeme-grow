@@ -25,7 +25,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _sendCode() async {
     final email = _emailController.text.trim();
-    if (email.isEmpty) return;
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email')),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
 
@@ -33,6 +38,8 @@ class _SignInScreenState extends State<SignInScreen> {
       await _authService.sendEmailCode(email);
 
       if (!mounted) return;
+      
+      // ✅ استخدم push (عادي هنا)
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -40,12 +47,19 @@ class _SignInScreenState extends State<SignInScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
   }
 
   @override
@@ -80,7 +94,11 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: ElevatedButton(
                   onPressed: _loading ? null : _sendCode,
                   child: _loading
-                      ? const CircularProgressIndicator()
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Send verification code'),
                 ),
               ),

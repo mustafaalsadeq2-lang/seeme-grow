@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/child.dart';
+import '../services/notification_service.dart';
 import '../storage/local_storage_service.dart';
 import '../utils/age_calculator.dart';
 import 'add_child_screen.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.addObserver(this);
     _loadChildren();
     _syncFromCloud(); // Phase 1: read-only
+    _initNotifications();
   }
 
   @override
@@ -43,6 +45,15 @@ class _HomeScreenState extends State<HomeScreen>
       _loadChildren();
       _syncFromCloud();
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Notifications
+  // ---------------------------------------------------------------------------
+
+  Future<void> _initNotifications() async {
+    await NotificationService.init();
+    await NotificationService.testNotification();
   }
 
   // ---------------------------------------------------------------------------

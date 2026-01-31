@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/child.dart';
 import '../repositories/photo_repository.dart';
 import '../repositories/cloud_photo_repository.dart';
+import 'comparison_screen.dart';
 import 'timeline_screen.dart';
 import 'timeline_movie_screen.dart';
 
@@ -63,6 +64,9 @@ class _ChildPageState extends State<ChildPage> {
 
   bool get _hasPhotos =>
       child.yearPhotos.values.any((p) => p.trim().isNotEmpty);
+
+  int get _photoCount =>
+      child.yearPhotos.values.where((p) => p.trim().isNotEmpty).length;
 
   void _goBack() {
     Navigator.pop(context, _hasChanges);
@@ -132,6 +136,37 @@ class _ChildPageState extends State<ChildPage> {
                     ),
 
                   if (_hasPhotos) const SizedBox(height: 16),
+
+                  if (_photoCount >= 2)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.compare_arrows),
+                        label: const Text(
+                          'Compare Growth',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ComparisonScreen(
+                                childId: child.localId,
+                                childName: child.name,
+                              ),
+                            ),
+                          );
+                          _hasChanges = true;
+                        },
+                      ),
+                    ),
+
+                  if (_photoCount >= 2) const SizedBox(height: 16),
 
                   SizedBox(
                     width: double.infinity,

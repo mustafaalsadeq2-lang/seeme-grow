@@ -1,7 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    try {
+      await Supabase.instance.client.auth.signOut();
+
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +58,7 @@ class SettingsScreen extends StatelessWidget {
           _SettingsCard(
             icon: Icons.cloud_outlined,
             title: 'Backup & Restore',
-            subtitle: 'Keep your child’s memories safe',
+            subtitle: "Keep your child's memories safe", // ✅ double quotes
             trailing: const Text(
               'Coming Soon',
               style: TextStyle(
@@ -24,7 +66,7 @@ class SettingsScreen extends StatelessWidget {
                 fontSize: 13,
               ),
             ),
-            onTap: null, // disabled for now
+            onTap: null,
           ),
 
           const SizedBox(height: 12),
@@ -33,22 +75,35 @@ class SettingsScreen extends StatelessWidget {
           _SettingsCard(
             icon: Icons.favorite_outline,
             title: 'About SeeMeGrow',
-            subtitle:
-                'A private space to capture and relive childhood memories',
+            subtitle: 'A private space to capture and relive childhood memories',
             onTap: () {
               showAboutDialog(
                 context: context,
                 applicationName: 'SeeMeGrow',
                 applicationVersion: '1.1.0',
                 applicationLegalese:
-                    'Crafted with care to preserve life’s most precious moments.',
+                    "Crafted with care to preserve life's most precious moments.", // ✅ double quotes
               );
             },
           ),
 
+          const SizedBox(height: 12),
+
+          // 🔹 Logout
+          _SettingsCard(
+            icon: Icons.logout,
+            title: 'Logout',
+            subtitle: 'Sign out of your account',
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: Colors.red,
+            ),
+            onTap: () => _handleLogout(context),
+          ),
+
           const SizedBox(height: 40),
 
-          // 🔹 Version (footer)
+          // 🔹 Version
           const Center(
             child: Column(
               children: [
@@ -103,12 +158,15 @@ class _SettingsCard extends StatelessWidget {
         onTap: onTap,
         leading: Icon(
           icon,
-          color: Colors.purple,
+          color: onTap == null
+              ? Colors.grey
+              : (icon == Icons.logout ? Colors.red : Colors.purple),
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
+            color: icon == Icons.logout ? Colors.red : null,
           ),
         ),
         subtitle: Text(
@@ -118,9 +176,9 @@ class _SettingsCard extends StatelessWidget {
           ),
         ),
         trailing: trailing ??
-            const Icon(
+            Icon(
               Icons.chevron_right,
-              color: Colors.grey,
+              color: onTap == null ? Colors.grey : null,
             ),
       ),
     );
