@@ -8,6 +8,7 @@ import '../storage/local_storage_service.dart';
 import 'comparison_screen.dart';
 import 'growth_stats_screen.dart';
 import 'timeline_movie_screen.dart';
+import 'voice_note_screen.dart';
 import 'year_detail_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
@@ -415,6 +416,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                                     title: isBirth
                                         ? '${child.name} · Birth'
                                         : '${child.name} · Year $year',
+                                    childId: widget.childId,
+                                    childName: child.name,
+                                    year: year,
                                   ),
                                 ),
                               );
@@ -649,11 +653,17 @@ class _PhotoZoomScreen extends StatefulWidget {
   final String imagePath;
   final String heroTag;
   final String title;
+  final String childId;
+  final String childName;
+  final int year;
 
   const _PhotoZoomScreen({
     required this.imagePath,
     required this.heroTag,
     required this.title,
+    required this.childId,
+    required this.childName,
+    required this.year,
   });
 
   @override
@@ -761,6 +771,39 @@ class _PhotoZoomScreenState extends State<_PhotoZoomScreen>
                   Icons.close,
                   color: Colors.white,
                   size: 22,
+                ),
+              ),
+            ),
+          ),
+
+          // Voice note button – top right (second)
+          Positioned(
+            top: padding.top + 12,
+            right: 60,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VoiceNoteScreen(
+                      childId: widget.childId,
+                      childName: widget.childName,
+                      year: widget.year,
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.mic_outlined,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
             ),

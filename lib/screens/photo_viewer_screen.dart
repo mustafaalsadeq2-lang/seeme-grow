@@ -4,12 +4,17 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'voice_note_screen.dart';
+
 class PhotoViewerScreen extends StatefulWidget {
   const PhotoViewerScreen({
     super.key,
     required this.images,
     required this.initialIndex,
     this.title,
+    this.childId,
+    this.childName,
+    this.year,
   });
 
   /// List of image sources.
@@ -19,6 +24,10 @@ class PhotoViewerScreen extends StatefulWidget {
 
   final int initialIndex;
   final String? title;
+
+  final String? childId;
+  final String? childName;
+  final int? year;
 
   @override
   State<PhotoViewerScreen> createState() => _PhotoViewerScreenState();
@@ -87,11 +96,46 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
               ),
             ),
 
+            // Voice note button
+            if (widget.childId != null &&
+                widget.childName != null &&
+                widget.year != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: AnimatedOpacity(
+                  opacity: _showControls ? 1 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: IgnorePointer(
+                    ignoring: !_showControls,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.mic_outlined,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => VoiceNoteScreen(
+                              childId: widget.childId!,
+                              childName: widget.childName!,
+                              year: widget.year!,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
             if (widget.title != null)
               Positioned(
                 top: 14,
                 left: 56,
-                right: 12,
+                right: 56,
                 child: AnimatedOpacity(
                   opacity: _showControls ? 1 : 0,
                   duration: const Duration(milliseconds: 180),
