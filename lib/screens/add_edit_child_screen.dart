@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/child.dart';
+import '../storage/local_storage_service.dart';
 
 class EditChildScreen extends StatefulWidget {
   final Child child;
@@ -50,18 +51,30 @@ class _EditChildScreenState extends State<EditChildScreen> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_canSave) return;
 
-    setState(() => _saving = true);
+    try {
+      setState(() => _saving = true);
 
-    final updatedChild = widget.child.copyWith(
-      name: _nameController.text.trim(),
-      birthDate: _birthDate!,
-    );
+      final updatedChild = widget.child.copyWith(
+        name: _nameController.text.trim(),
+        birthDate: _birthDate!,
+        updatedAt: DateTime.now(),
+      );
 
-    // 🔁 نرجع Child المعدل – HomeScreen يتولى التخزين
-    Navigator.pop(context, updatedChild);
+      await LocalStorageService.updateChild(updatedChild);
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      debugPrint('Save error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
   }
 
   @override
