@@ -236,9 +236,6 @@ class _HomeScreenState extends State<HomeScreen>
     return colors[localId.hashCode.abs() % colors.length];
   }
 
-  String _initial(String name) =>
-      name.isNotEmpty ? name.characters.first : '?';
-
   String _greeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good Morning!';
@@ -496,6 +493,7 @@ class _HomeScreenState extends State<HomeScreen>
   // ---------------------------------------------------------------------------
 
   Widget _buildChildCard(Child child, int index) {
+    final theme = Theme.of(context);
     final age = AgeCalculator.currentAge(child.birthDate);
     final photo = _latestPhoto(child);
     final memories = _memoryCount(child);
@@ -506,145 +504,102 @@ class _HomeScreenState extends State<HomeScreen>
 
     return _animatedSlide(
       _stagger(begin, end),
-      GestureDetector(
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TimelineScreen(childId: child.localId),
-            ),
-          );
-          _loadChildren();
-        },
-        child: Container(
-          height: 130,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+      Card(
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TimelineScreen(childId: child.localId),
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              fit: StackFit.expand,
+            );
+            _loadChildren();
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                // Background
-                if (photo != null)
-                  Image.file(
-                    File(photo),
-                    fit: BoxFit.cover,
-                  )
-                else
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          color.withValues(alpha: 0.7),
-                          color.withValues(alpha: 0.3),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                  ),
-
-                // Dark overlay for readability
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.black.withValues(alpha: 0.6),
-                        Colors.black.withValues(alpha: 0.2),
-                      ],
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                    ),
-                  ),
-                ),
-
-                // Content
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      // Avatar
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
-                        child: Text(
-                          _initial(child.name),
+                // Avatar with photo or initial
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: color,
+                  backgroundImage: photo != null
+                      ? FileImage(File(photo))
+                      : null,
+                  child: photo == null
+                      ? Text(
+                          child.name[0].toUpperCase(),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 22,
+                            fontSize: 28,
                             fontWeight: FontWeight.bold,
                           ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        child.name,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      // Info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              child.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              age.toString(),
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$memories ${memories == 1 ? 'memory' : 'memories'}',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: 4),
+                      Text(
+                        age.toString(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
-                      // Menu
-                      PopupMenuButton<String>(
-                        iconColor: Colors.white.withValues(alpha: 0.8),
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _editChild(child);
-                          } else if (value == 'delete') {
-                            _deleteChild(child);
-                          }
-                        },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(
-                            value: 'edit',
-                            child: Text('Edit'),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                              'Delete',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 2),
+                      Text(
+                        '$memories ${memories == 1 ? 'memory' : 'memories'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.5),
+                        ),
                       ),
                     ],
                   ),
+                ),
+                // Menu
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _editChild(child);
+                    } else if (value == 'delete') {
+                      _deleteChild(child);
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit'),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
