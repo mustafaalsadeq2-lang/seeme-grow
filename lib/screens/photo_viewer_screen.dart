@@ -69,11 +69,7 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
                   itemCount: widget.images.length,
                   itemBuilder: (context, index) {
                     final src = widget.images[index];
-                    return InteractiveViewer(
-                      minScale: 1,
-                      maxScale: 4,
-                      child: Center(child: _buildImage(src)),
-                    );
+                    return Center(child: _buildImage(src));
                   },
                 ),
               ),
@@ -170,7 +166,12 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
         final b64 = s.substring(comma + 1);
         try {
           final bytes = base64Decode(b64);
-          return Image.memory(bytes, fit: BoxFit.contain);
+          return Image.memory(
+            bytes,
+            fit: BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+          );
         } catch (_) {
           return _broken();
         }
@@ -183,6 +184,8 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
       return Image.network(
         s,
         fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
         errorBuilder: (_, __, ___) => _broken(),
       );
     }
@@ -192,6 +195,8 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
     return Image.file(
       file,
       fit: BoxFit.contain,
+      width: double.infinity,
+      height: double.infinity,
       errorBuilder: (_, __, ___) => _broken(),
     );
   }

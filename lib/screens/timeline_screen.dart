@@ -281,6 +281,372 @@ class _TimelineScreenState extends State<TimelineScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Progress Header
+  // ---------------------------------------------------------------------------
+
+  Widget _buildProgressHeader() {
+    final theme = Theme.of(context);
+    final completed = _completedYears;
+    final percent = (completed / 19 * 100).round();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '$completed of 19 memories',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$percent%',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          AnimatedBuilder(
+            animation: _progressAnimation,
+            builder: (_, __) {
+              final progressTarget = completed / 19;
+              return Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor:
+                        (progressTarget * _progressAnimation.value)
+                            .clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF26A69A),
+                            Color(0xFF7E57C2),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF26A69A)
+                                .withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Milestone Badges
+  // ---------------------------------------------------------------------------
+
+  static const _milestones = <int, (IconData, String)>{
+    0: (Icons.cake, 'Birth'),
+    1: (Icons.star, 'First Year'),
+    5: (Icons.auto_awesome, 'Half Decade'),
+    10: (Icons.emoji_events, 'Decade'),
+  };
+
+  bool _hasMilestone(int year) => _milestones.containsKey(year);
+
+  Widget _milestoneBadge(int year) {
+    final theme = Theme.of(context);
+    final milestone = _milestones[year];
+    if (milestone == null) return const SizedBox.shrink();
+
+    final (icon, label) = milestone;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: theme.colorScheme.primary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Year Card
+  // ---------------------------------------------------------------------------
+
+  Widget _buildYearItem(int year) {
+    final anim = _itemAnimation(year);
+
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, cardChild) {
+        return Opacity(
+          opacity: anim.value,
+          child: Transform.translate(
+            offset: Offset(0, 24 * (1 - anim.value)),
+            child: cardChild,
+          ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_hasMilestone(year)) _milestoneBadge(year),
+          _buildYearCard(year),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYearCard(int year) {
+    final theme = Theme.of(context);
+    final child = _child!;
+    final isBirth = year == 0;
+    final hasPhoto = _hasPhoto(year);
+    final isFuture = year > _currentYear;
+    final isCurrent = year == _currentYear;
+    final imagePath = child.yearPhotos[year];
+    final title = isBirth ? 'Birth' : 'Year $year';
+    final gregorianYear = '(${child.birthDate.year + year})';
+    final enabled = !isFuture;
+
+    const teal = Color(0xFF26A69A);
+
+    return _TapScaleCard(
+      enabled: enabled,
+      onTap: enabled
+          ? () async {
+              if (hasPhoto) {
+                final result = await Navigator.push<String>(
+                  context,
+                  _createZoomRoute(
+                    _PhotoZoomScreen(
+                      imagePath: imagePath!,
+                      heroTag: 'year_photo_${widget.childId}_$year',
+                      title: isBirth
+                          ? '${child.name} · Birth'
+                          : '${child.name} · Year $year',
+                      childId: widget.childId,
+                      childName: child.name,
+                      year: year,
+                    ),
+                  ),
+                );
+                if (result == 'edit' && mounted) {
+                  await Navigator.push(
+                    context,
+                    _createRoute(
+                      YearDetailScreen(child: child, year: year),
+                    ),
+                  );
+                }
+              } else {
+                await Navigator.push(
+                  context,
+                  _createRoute(
+                    YearDetailScreen(child: child, year: year),
+                  ),
+                );
+              }
+              _loadChild();
+            }
+          : null,
+      child: Card(
+        elevation: isCurrent ? 3 : 1,
+        shadowColor: Colors.black.withValues(alpha: 0.06),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: null, // Handled by _TapScaleCard
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // Thumbnail
+                Hero(
+                  tag: 'year_photo_${widget.childId}_$year',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: hasPhoto
+                          ? Image.file(
+                              File(imagePath!),
+                              fit: BoxFit.cover,
+                              cacheWidth: 180,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: isFuture
+                                    ? null
+                                    : LinearGradient(
+                                        colors: [
+                                          theme.colorScheme.primary
+                                              .withValues(alpha: 0.1),
+                                          theme.colorScheme.primary
+                                              .withValues(alpha: 0.05),
+                                        ],
+                                      ),
+                                color: isFuture
+                                    ? theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.06)
+                                    : null,
+                              ),
+                              child: Icon(
+                                isFuture
+                                    ? Icons.lock
+                                    : Icons.add_photo_alternate,
+                                size: 24,
+                                color: theme.colorScheme.onSurface
+                                    .withValues(
+                                        alpha: isFuture ? 0.3 : 0.4),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          if (isCurrent)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'Now',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        gregorianYear,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.5),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      if (hasPhoto)
+                        const Row(
+                          children: [
+                            Text(
+                              'Memory saved',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: teal,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.check_circle,
+                              size: 14,
+                              color: teal,
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          isFuture ? 'Locked' : 'Add memory',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface
+                                .withValues(
+                                    alpha: isFuture ? 0.3 : 0.5),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Chevron
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurface
+                      .withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     if (_loading || _child == null) {
@@ -291,8 +657,6 @@ class _TimelineScreenState extends State<TimelineScreen>
     }
 
     final child = _child!;
-    final progressTarget = _completedYears / 19;
-    final currentYear = _currentYear;
 
     return Scaffold(
       appBar: AppBar(
@@ -344,232 +708,14 @@ class _TimelineScreenState extends State<TimelineScreen>
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Memories captured: $_completedYears of 19',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: AnimatedBuilder(
-                    animation: _progressAnimation,
-                    builder: (_, __) {
-                      return LinearProgressIndicator(
-                        value:
-                            progressTarget * _progressAnimation.value,
-                        minHeight: 8,
-                        backgroundColor: Colors.grey.shade300,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildProgressHeader(),
           const SizedBox(height: 8),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
               itemCount: 19,
               cacheExtent: 400,
-              itemBuilder: (context, year) {
-                final isBirth = year == 0;
-                final hasPhoto = _hasPhoto(year);
-                final isFuture = year > currentYear;
-                final isCurrent = year == currentYear;
-
-                final imagePath = child.yearPhotos[year];
-                final title = isBirth ? 'Birth' : 'Year $year';
-                final enabled = !isFuture;
-
-                final anim = _itemAnimation(year);
-
-                return AnimatedBuilder(
-                  animation: anim,
-                  builder: (context, cardChild) {
-                    return Opacity(
-                      opacity: anim.value,
-                      child: Transform.translate(
-                        offset: Offset(0, 24 * (1 - anim.value)),
-                        child: cardChild,
-                      ),
-                    );
-                  },
-                  child: _TapScaleCard(
-                    enabled: enabled,
-                    onTap: enabled
-                        ? () async {
-                            if (hasPhoto) {
-                              final result =
-                                  await Navigator.push<String>(
-                                context,
-                                _createZoomRoute(
-                                  _PhotoZoomScreen(
-                                    imagePath: imagePath!,
-                                    heroTag:
-                                        'year_photo_${widget.childId}_$year',
-                                    title: isBirth
-                                        ? '${child.name} · Birth'
-                                        : '${child.name} · Year $year',
-                                    childId: widget.childId,
-                                    childName: child.name,
-                                    year: year,
-                                  ),
-                                ),
-                              );
-                              if (result == 'edit' && mounted) {
-                                await Navigator.push(
-                                  context,
-                                  _createRoute(
-                                    YearDetailScreen(
-                                      child: child,
-                                      year: year,
-                                    ),
-                                  ),
-                                );
-                              }
-                            } else {
-                              await Navigator.push(
-                                context,
-                                _createRoute(
-                                  YearDetailScreen(
-                                    child: child,
-                                    year: year,
-                                  ),
-                                ),
-                              );
-                            }
-                            _loadChild();
-                          }
-                        : null,
-                    child: Card(
-                      elevation: isCurrent ? 4 : 1,
-                      color: isCurrent ? Colors.purple.shade50 : null,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: SizedBox(
-                        height: 88,
-                        child: Row(
-                          children: [
-                            Hero(
-                              tag:
-                                  'year_photo_${widget.childId}_$year',
-                              child: Container(
-                                width: 88,
-                                height: 88,
-                                decoration: BoxDecoration(
-                                  borderRadius:
-                                      const BorderRadius.only(
-                                    topLeft: Radius.circular(16),
-                                    bottomLeft: Radius.circular(16),
-                                  ),
-                                  color: Colors.grey.shade300,
-                                ),
-                                child: hasPhoto
-                                    ? ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.only(
-                                          topLeft:
-                                              Radius.circular(16),
-                                          bottomLeft:
-                                              Radius.circular(16),
-                                        ),
-                                        child: Image.file(
-                                          File(imagePath!),
-                                          fit: BoxFit.cover,
-                                          alignment:
-                                              Alignment.topCenter,
-                                          cacheWidth: 264,
-                                        ),
-                                      )
-                                    : Icon(
-                                        isFuture
-                                            ? Icons.lock
-                                            : isBirth
-                                                ? Icons.cake
-                                                : Icons.photo,
-                                        color: Colors.grey,
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        title,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      if (isCurrent)
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(
-                                                  left: 8),
-                                          padding:
-                                              const EdgeInsets
-                                                  .symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.purple,
-                                            borderRadius:
-                                                BorderRadius.circular(
-                                                    12),
-                                          ),
-                                          child: const Text(
-                                            'Current',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    hasPhoto
-                                        ? 'Memory saved'
-                                        : isFuture
-                                            ? 'Not available yet'
-                                            : isCurrent
-                                                ? 'Add memory for this year'
-                                                : 'Add memory',
-                                    style: const TextStyle(
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.only(right: 12),
-                              child: Icon(Icons.chevron_right),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+              itemBuilder: (_, year) => _buildYearItem(year),
             ),
           ),
         ],
