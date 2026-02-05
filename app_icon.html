@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SeeMeGrow App Icon Generator</title>
+  <style>
+    body {
+      font-family: system-ui;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    canvas {
+      border: 2px solid #ddd;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    button {
+      margin-top: 20px;
+      padding: 15px 40px;
+      font-size: 18px;
+      background: linear-gradient(135deg, #14b8a6, #a855f7);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <h1>SeeMeGrow App Icon</h1>
+  <canvas id="icon" width="1024" height="1024"></canvas>
+  <button onclick="downloadIcon()">Download Icon (1024x1024)</button>
+
+  <script>
+    const canvas = document.getElementById('icon');
+    const ctx = canvas.getContext('2d');
+
+    // Draw gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 1024, 1024);
+    gradient.addColorStop(0, '#14b8a6'); // teal
+    gradient.addColorStop(1, '#a855f7'); // purple
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Draw white seedling/plant icon
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 20;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Stem
+    ctx.beginPath();
+    ctx.moveTo(512, 700);
+    ctx.lineTo(512, 400);
+    ctx.stroke();
+
+    // Left leaf
+    ctx.beginPath();
+    ctx.arc(400, 450, 80, 0, Math.PI, true);
+    ctx.fill();
+
+    // Right leaf
+    ctx.beginPath();
+    ctx.arc(624, 450, 80, 0, Math.PI, true);
+    ctx.fill();
+
+    // Top leaves
+    ctx.beginPath();
+    ctx.arc(450, 350, 60, 0, Math.PI, true);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(574, 350, 60, 0, Math.PI, true);
+    ctx.fill();
+
+    // Optional: Add "SMG" text
+    ctx.font = 'bold 100px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SMG', 512, 800);
+
+    function downloadIcon() {
+      const link = document.createElement('a');
+      link.download = 'seeme_grow_icon_1024.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>

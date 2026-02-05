@@ -11,6 +11,7 @@
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/app_links_platform_interface-2.0.2/lib/app_links_method_channel.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/app_links_platform_interface-2.0.2/lib/app_links_platform_interface.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/app_links_web-1.0.4/LICENSE
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/archive-4.0.7/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/args-2.7.0/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/async-2.13.0/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/async-2.13.0/lib/async.dart
@@ -67,6 +68,8 @@
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/characters-1.4.0/lib/src/grapheme_clusters/breaks.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/characters-1.4.0/lib/src/grapheme_clusters/constants.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/characters-1.4.0/lib/src/grapheme_clusters/table.dart
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/checked_yaml-2.0.4/LICENSE
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/cli_util-0.4.2/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/clock-1.1.2/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/clock-1.1.2/lib/clock.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/clock-1.1.2/lib/src/clock.dart
@@ -263,6 +266,7 @@
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/flutter_dotenv-5.2.1/lib/src/errors.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/flutter_dotenv-5.2.1/lib/src/parser.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/flutter_foreground_task-9.2.0/LICENSE
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/flutter_launcher_icons-0.13.1/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/flutter_lints-3.0.2/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/flutter_local_notifications-17.2.4/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/flutter_local_notifications-17.2.4/lib/flutter_local_notifications.dart
@@ -417,6 +421,7 @@
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/http_parser-4.1.2/lib/src/media_type.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/http_parser-4.1.2/lib/src/scan.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/http_parser-4.1.2/lib/src/utils.dart
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/image-4.7.2/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/image_picker-1.2.1/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/image_picker_android-0.8.13+10/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/image_picker_android-0.8.13+10/lib/image_picker_android.dart
@@ -451,6 +456,7 @@
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/image_picker_windows-0.2.2/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/image_picker_windows-0.2.2/lib/image_picker_windows.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/js-0.7.2/LICENSE
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/json_annotation-4.10.0/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/jwt_decode-0.3.1/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/jwt_decode-0.3.1/lib/jwt_decode.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/leak_tracker-11.0.2/LICENSE
@@ -911,6 +917,7 @@
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/pointycastle-4.0.0/lib/stream/rc4_engine.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/pointycastle-4.0.0/lib/stream/salsa20.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/pointycastle-4.0.0/lib/stream/sic.dart
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/posix-6.0.3/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/postgrest-2.6.0/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/postgrest-2.6.0/lib/postgrest.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/postgrest-2.6.0/lib/src/constants.dart
@@ -1686,6 +1693,7 @@
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/xml-6.6.1/lib/src/xml_events/visitor.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/xml-6.6.1/lib/xml.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/xml-6.6.1/lib/xml_events.dart
+/Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/yaml-3.1.3/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/yet_another_json_isolate-2.1.0/LICENSE
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/yet_another_json_isolate-2.1.0/lib/src/_isolates_io.dart
 /Users/mustafaalsadeq/.pub-cache/hosted/pub.dev/yet_another_json_isolate-2.1.0/lib/yet_another_json_isolate.dart
