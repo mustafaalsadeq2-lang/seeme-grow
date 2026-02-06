@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:file_selector/file_selector.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/child.dart';
@@ -66,65 +66,132 @@ class _YearDetailScreenState extends State<YearDetailScreen>
     _fadeController.forward(from: 0);
   }
 
-  Future<void> _pickPhoto() async {
-    final file = await openFile(
-      acceptedTypeGroups: const [
-        XTypeGroup(
-          label: 'Images',
-          extensions: ['jpg', 'jpeg', 'png'],
-        ),
-      ],
-    );
+  final ImagePicker _picker = ImagePicker();
 
-    if (file == null) return;
-
-    setState(() => _loading = true);
-
-    final appDir = await getApplicationDocumentsDirectory();
-    final childDir =
-        Directory('${appDir.path}/${widget.child.localId}');
-    if (!await childDir.exists()) {
-      await childDir.create(recursive: true);
-    }
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final newPath =
-        '${childDir.path}/year_${widget.year}_$timestamp.jpg';
-
-    await File(file.path).copy(newPath);
-
-    final children = await LocalStorageService.loadChildren();
-    final index = children.indexWhere(
-      (c) => c.localId == widget.child.localId,
-    );
-
-    final updatedChild = children[index];
-    updatedChild.yearPhotos[widget.year] = newPath;
-
-    children[index] = updatedChild;
-    await LocalStorageService.saveChildren(children);
-
-    HapticFeedback.mediumImpact();
-
-    await _loadFromStorage();
-
-    if (!mounted) return;
-
-    setState(() => _loading = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          '✨ Memory saved',
-          textAlign: TextAlign.center,
-        ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
+  Future<void> _showPhotoOptions() async {
+    final result = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFF26A69A)),
+                title: const Text('Take Photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFF7E57C2)),
+                title: const Text('Choose from Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.close, color: Colors.grey.shade600),
+                title: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+                onTap: () => Navigator.pop(context),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
+
+    if (result == null) return;
+
+    await _pickPhoto(result);
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 2048,
+        maxHeight: 2048,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() => _loading = true);
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final childDir = Directory('${appDir.path}/${widget.child.localId}');
+      if (!await childDir.exists()) {
+        await childDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final newPath = '${childDir.path}/year_${widget.year}_$timestamp.jpg';
+
+      await File(pickedFile.path).copy(newPath);
+
+      final children = await LocalStorageService.loadChildren();
+      final index = children.indexWhere(
+        (c) => c.localId == widget.child.localId,
+      );
+
+      final updatedChild = children[index];
+      updatedChild.yearPhotos[widget.year] = newPath;
+
+      children[index] = updatedChild;
+      await LocalStorageService.saveChildren(children);
+
+      HapticFeedback.mediumImpact();
+
+      await _loadFromStorage();
+
+      if (!mounted) return;
+
+      setState(() => _loading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            '✨ Memory saved',
+            textAlign: TextAlign.center,
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to capture photo: $e'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      );
+    }
   }
 
   String _ageText() {
@@ -273,7 +340,7 @@ class _YearDetailScreenState extends State<YearDetailScreen>
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.add_a_photo),
                   label: const Text('Add / Change Photo'),
-                  onPressed: _loading ? null : _pickPhoto,
+                  onPressed: _loading ? null : _showPhotoOptions,
                 ),
               ),
             ),

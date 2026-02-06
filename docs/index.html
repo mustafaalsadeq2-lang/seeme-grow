@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SeeMeGrow - Capture Your Child's Journey</title>
+  <meta name="description" content="Document your child's growth from birth to 18 with one photo per year. A beautiful timeline of memories.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --teal: #26A69A;
+      --purple: #7E57C2;
+      --dark: #1a1a1a;
+      --light: #fafafa;
+      --gray: #666;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      color: var(--dark);
+      background: var(--light);
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 100%);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15) 0%, transparent 50%);
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      background: white;
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-text {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--teal), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 48px);
+      font-weight: 700;
+      color: white;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: rgba(255,255,255,0.9);
+      max-width: 500px;
+      margin-bottom: 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-badge {
+      display: inline-block;
+      background: #000;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .app-badge span {
+      display: block;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .app-badge strong {
+      font-size: 18px;
+    }
+
+    /* Features Section */
+    .features {
+      padding: 80px 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 48px;
+      color: var(--dark);
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: white;
+      padding: 32px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+    }
+
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--teal), var(--purple));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: var(--dark);
+    }
+
+    .feature-card p {
+      color: var(--gray);
+      font-size: 15px;
+    }
+
+    /* Screenshots Section */
+    .screenshots {
+      padding: 60px 20px 80px;
+      background: linear-gradient(180deg, var(--light) 0%, #f0f0f0 100%);
+    }
+
+    .screenshots h2 {
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 48px;
+      color: var(--dark);
+    }
+
+    .screenshot-container {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .screenshot-placeholder {
+      width: 200px;
+      height: 420px;
+      background: linear-gradient(180deg, #e8e8e8 0%, #d8d8d8 100%);
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    }
+
+    .screenshot-placeholder svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    /* Privacy Section */
+    .privacy-highlight {
+      padding: 60px 20px;
+      text-align: center;
+      background: white;
+    }
+
+    .privacy-highlight h2 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: var(--dark);
+    }
+
+    .privacy-highlight p {
+      color: var(--gray);
+      max-width: 600px;
+      margin: 0 auto 24px;
+    }
+
+    .privacy-badges {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #e8f5e9;
+      border-radius: 20px;
+      font-size: 14px;
+      color: #2e7d32;
+      font-weight: 500;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 20px;
+      background: var(--dark);
+      color: white;
+      text-align: center;
+    }
+
+    footer nav {
+      margin-bottom: 24px;
+    }
+
+    footer a {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      margin: 0 16px;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: white;
+    }
+
+    footer p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .hero { padding: 60px 20px; }
+      .features { padding: 60px 20px; }
+      .screenshot-placeholder { width: 160px; height: 340px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="logo">
+      <span class="logo-text">SMG</span>
+    </div>
+    <h1>SeeMeGrow</h1>
+    <p>Capture your child's journey from birth to 18 with one beautiful photo per year. Create a timeline of memories that lasts a lifetime.</p>
+    <a href="#" class="app-badge">
+      <span>Download on the</span>
+      <strong>App Store</strong>
+    </a>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <h2>Why SeeMeGrow?</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📸</div>
+        <h3>One Photo Per Year</h3>
+        <p>Keep it simple and meaningful. Document each year milestone from birth to 18 years old.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎬</div>
+        <h3>Beautiful Timeline</h3>
+        <p>Watch your child grow with a stunning visual timeline. Swipe through memories like stories.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Private & Secure</h3>
+        <p>Your photos stay on your device by default. Optional cloud sync with end-to-end encryption.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👨‍👩‍👧</div>
+        <h3>Multiple Children</h3>
+        <p>Track timelines for all your children in one app. Each with their own beautiful journey.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screenshots -->
+  <section class="screenshots">
+    <h2>See It In Action</h2>
+    <div class="screenshot-container">
+      <div class="screenshot-placeholder">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+        </svg>
+        <span>Timeline View</span>
+      </div>
+      <div class="screenshot-placeholder">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+        </svg>
+        <span>Photo Viewer</span>
+      </div>
+      <div class="screenshot-placeholder">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+        </svg>
+        <span>Compare Years</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy Highlight -->
+  <section class="privacy-highlight">
+    <h2>Your Privacy Matters</h2>
+    <p>We believe your family's memories belong to you. That's why SeeMeGrow is designed with privacy first.</p>
+    <div class="privacy-badges">
+      <span class="privacy-badge">✓ No ads</span>
+      <span class="privacy-badge">✓ No tracking</span>
+      <span class="privacy-badge">✓ No data selling</span>
+      <span class="privacy-badge">✓ COPPA compliant</span>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <nav>
+      <a href="privacy_policy.html">Privacy Policy</a>
+      <a href="terms_of_service.html">Terms of Service</a>
+      <a href="mailto:support@seeme.grow">Contact</a>
+    </nav>
+    <p>&copy; 2024 SeeMeGrow. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

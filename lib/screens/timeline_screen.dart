@@ -176,21 +176,60 @@ class _TimelineScreenState extends State<TimelineScreen>
     );
   }
 
-  Route<String> _createZoomRoute(Widget page) {
-    return PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionDuration: const Duration(milliseconds: 300),
-      reverseTransitionDuration: const Duration(milliseconds: 250),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOut,
-            reverseCurve: Curves.easeIn,
-          ),
-          child: child,
-        );
-      },
+  // ---------------------------------------------------------------------------
+  // Stories Viewer - Snapchat-style photo gallery
+  // ---------------------------------------------------------------------------
+
+  /// Returns list of (year, imagePath) for all years with photos
+  List<(int, String)> get _photosWithYears {
+    final child = _child;
+    if (child == null) return [];
+
+    final result = <(int, String)>[];
+    for (int y = 0; y <= 18; y++) {
+      final path = child.yearPhotos[y];
+      if (path != null && path.trim().isNotEmpty) {
+        result.add((y, path));
+      }
+    }
+    return result;
+  }
+
+  Future<String?> _openStoriesViewer(int tappedYear) async {
+    final photos = _photosWithYears;
+    if (photos.isEmpty) return null;
+
+    // Find index of tapped year
+    final startIndex = photos.indexWhere((p) => p.$1 == tappedYear);
+    if (startIndex == -1) return null;
+
+    final child = _child!;
+
+    return Navigator.push<String>(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return _StoriesPhotoViewer(
+            photos: photos,
+            initialIndex: startIndex,
+            childName: child.name,
+            birthYear: child.birthDate.year,
+            childId: widget.childId,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            ),
+            child: child,
+          );
+        },
+      ),
     );
   }
 
@@ -458,21 +497,8 @@ class _TimelineScreenState extends State<TimelineScreen>
       onTap: enabled
           ? () async {
               if (hasPhoto) {
-                final result = await Navigator.push<String>(
-                  context,
-                  _createZoomRoute(
-                    _PhotoZoomScreen(
-                      imagePath: imagePath!,
-                      heroTag: 'year_photo_${widget.childId}_$year',
-                      title: isBirth
-                          ? '${child.name} · Birth'
-                          : '${child.name} · Year $year',
-                      childId: widget.childId,
-                      childName: child.name,
-                      year: year,
-                    ),
-                  ),
-                );
+                // Open Snapchat-style stories viewer
+                final result = await _openStoriesViewer(year);
                 if (result == 'edit' && mounted) {
                   await Navigator.push(
                     context,
@@ -993,6 +1019,344 @@ class _PhotoZoomScreenState extends State<_PhotoZoomScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Snapchat-style Stories Photo Viewer
+// ---------------------------------------------------------------------------
+class _StoriesPhotoViewer extends StatefulWidget {
+  final List<(int, String)> photos; // (year, imagePath)
+  final int initialIndex;
+  final String childName;
+  final int birthYear;
+  final String childId;
+
+  const _StoriesPhotoViewer({
+    required this.photos,
+    required this.initialIndex,
+    required this.childName,
+    required this.birthYear,
+    required this.childId,
+  });
+
+  @override
+  State<_StoriesPhotoViewer> createState() => _StoriesPhotoViewerState();
+}
+
+class _StoriesPhotoViewerState extends State<_StoriesPhotoViewer>
+    with SingleTickerProviderStateMixin {
+  late PageController _pageController;
+  late int _currentIndex;
+  double _dragOffset = 0;
+  bool _isDragging = false;
+
+  late AnimationController _fadeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+      value: 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  String _getYearLabel(int year) {
+    final gregorian = widget.birthYear + year;
+    if (year == 0) {
+      return 'Birth • $gregorian';
+    }
+    return 'Year $year • $gregorian';
+  }
+
+  void _onVerticalDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      _isDragging = true;
+      _dragOffset += details.delta.dy;
+    });
+  }
+
+  void _onVerticalDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+
+    // Close if dragged down enough or with enough velocity
+    if (_dragOffset > 100 || velocity > 500) {
+      _fadeController.reverse().then((_) {
+        if (mounted) Navigator.pop(context);
+      });
+    } else {
+      // Snap back
+      setState(() {
+        _dragOffset = 0;
+        _isDragging = false;
+      });
+    }
+  }
+
+  void _onPageChanged(int index) {
+    HapticFeedback.selectionClick();
+    setState(() => _currentIndex = index);
+  }
+
+  void _openEditForCurrentPhoto() {
+    Navigator.pop(context, 'edit');
+  }
+
+  void _openVoiceNote() {
+    final (year, _) = widget.photos[_currentIndex];
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VoiceNoteScreen(
+          childId: widget.childId,
+          childName: widget.childName,
+          year: year,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.of(context).padding;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Calculate opacity and scale based on drag
+    final dragProgress = (_dragOffset.abs() / (screenHeight * 0.3)).clamp(0.0, 1.0);
+    final opacity = 1.0 - (dragProgress * 0.5);
+    final scale = 1.0 - (dragProgress * 0.1);
+
+    return FadeTransition(
+      opacity: _fadeController,
+      child: Scaffold(
+        backgroundColor: Colors.black.withValues(alpha: opacity),
+        body: GestureDetector(
+          onVerticalDragUpdate: _onVerticalDragUpdate,
+          onVerticalDragEnd: _onVerticalDragEnd,
+          child: Transform.translate(
+            offset: Offset(0, _dragOffset.clamp(0, screenHeight * 0.5)),
+            child: Transform.scale(
+              scale: scale,
+              child: Stack(
+                children: [
+                  // Photo PageView
+                  Positioned.fill(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: _onPageChanged,
+                      itemCount: widget.photos.length,
+                      itemBuilder: (context, index) {
+                        final (year, path) = widget.photos[index];
+                        return Center(
+                          child: Image.file(
+                            File(path),
+                            fit: BoxFit.contain,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Progress indicators at top
+                  Positioned(
+                    top: padding.top + 12,
+                    left: 16,
+                    right: 16,
+                    child: Row(
+                      children: List.generate(widget.photos.length, (index) {
+                        final isActive = index == _currentIndex;
+                        final isPast = index < _currentIndex;
+                        return Expanded(
+                          child: Container(
+                            height: 3,
+                            margin: EdgeInsets.only(
+                              right: index < widget.photos.length - 1 ? 4 : 0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isActive || isPast
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  // Close button - top left
+                  Positioned(
+                    top: padding.top + 24,
+                    left: 12,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Voice note button - top right (second)
+                  Positioned(
+                    top: padding.top + 24,
+                    right: 60,
+                    child: GestureDetector(
+                      onTap: _openVoiceNote,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.mic_outlined,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Edit button - top right
+                  Positioned(
+                    top: padding.top + 24,
+                    right: 12,
+                    child: GestureDetector(
+                      onTap: _openEditForCurrentPhoto,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Year indicator at bottom
+                  Positioned(
+                    bottom: padding.bottom + 40,
+                    left: 24,
+                    right: 24,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Child name
+                        Text(
+                          widget.childName,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Year label
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Text(
+                            _getYearLabel(widget.photos[_currentIndex].$1),
+                            key: ValueKey(_currentIndex),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Swipe hint
+                        if (!_isDragging)
+                          Text(
+                            'Swipe down to close',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.4),
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Left/Right tap zones for navigation
+                  Positioned.fill(
+                    top: padding.top + 80,
+                    bottom: padding.bottom + 120,
+                    child: Row(
+                      children: [
+                        // Left tap - previous
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: () {
+                              if (_currentIndex > 0) {
+                                _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              }
+                            },
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                        // Right tap - next
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: () {
+                              if (_currentIndex < widget.photos.length - 1) {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              }
+                            },
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
