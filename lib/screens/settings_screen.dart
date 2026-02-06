@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 import '../services/notification_service.dart';
@@ -45,6 +46,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('dark_mode', value);
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open $url'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _handleLogout(BuildContext context) async {
@@ -98,11 +114,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           // 🔹 Backup & Restore
-          _SettingsCard(
+          const _SettingsCard(
             icon: Icons.cloud_outlined,
             title: 'Backup & Restore',
             subtitle: "Keep your child's memories safe", // ✅ double quotes
-            trailing: const Text(
+            trailing: Text(
               'Coming Soon',
               style: TextStyle(
                 color: Colors.grey,
@@ -138,6 +154,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: _toggleNotifications,
             ),
             onTap: null,
+          ),
+
+          const SizedBox(height: 24),
+
+          // 🔹 Legal Section Header
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              'Legal',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+
+          // 🔹 Privacy Policy
+          _SettingsCard(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Privacy Policy',
+            subtitle: 'How we handle your data',
+            onTap: () => _launchUrl('https://mustafaalsadeq2-lang.github.io/seeme-grow/privacy_policy.html'),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 🔹 Terms of Service
+          _SettingsCard(
+            icon: Icons.description_outlined,
+            title: 'Terms of Service',
+            subtitle: 'Terms and conditions',
+            onTap: () => _launchUrl('https://mustafaalsadeq2-lang.github.io/seeme-grow/terms_of_service.html'),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 🔹 Support
+          _SettingsCard(
+            icon: Icons.support_agent_outlined,
+            title: 'Support',
+            subtitle: 'Get help or send feedback',
+            onTap: () => _launchUrl('mailto:support@example.com'),
           ),
 
           const SizedBox(height: 12),
