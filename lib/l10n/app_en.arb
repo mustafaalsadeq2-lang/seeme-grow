@@ -1,0 +1,39 @@
+{
+  "@@locale": "en",
+
+  "verifyEmail": "Verify Email",
+  "enterCodeSentTo": "Enter the code sent to",
+  "pleaseEnterCode": "Please enter the code.",
+  "invalidCode": "Invalid code. Please try again.",
+  "codeExpired": "Code expired. Please request a new one.",
+  "verificationFailed": "Verification failed. Please try again.",
+  "verifyAndContinue": "Verify & Continue",
+  "newCodeSent": "New code sent!",
+  "resendFailed": "Resend failed: {e}",
+  "@resendFailed": {
+    "placeholders": {
+      "e": { "type": "String" }
+    }
+  },
+  "resendCode": "Resend code",
+  "resendCodeIn": "Resend code in {seconds}s",
+  "@resendCodeIn": {
+    "placeholders": {
+      "seconds": { "type": "String" }
+    }
+  },
+
+  "pleaseEnterEmail": "Please enter your email.",
+  "emailLabel": "EMAIL ADDRESS",
+  "sendVerificationCode": "Send Verification Code",
+  "codeSent": "Code sent! Check your inbox.",
+  "sendError": "Error: {e}",
+  "@sendError": {
+    "placeholders": {
+      "e": { "type": "String" }
+    }
+  },
+  "continueAsGuest": "Continue as Guest",
+
+  "videoNotAllowed": "Please select an image, not a video."
+}

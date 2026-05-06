@@ -1,0 +1,39 @@
+{
+  "@@locale": "ar",
+
+  "verifyEmail": "التحقق من البريد الإلكتروني",
+  "enterCodeSentTo": "أدخل الرمز المرسل إلى",
+  "pleaseEnterCode": "يرجى إدخال الرمز.",
+  "invalidCode": "رمز غير صحيح، يرجى المحاولة مرة أخرى.",
+  "codeExpired": "انتهت صلاحية الرمز، يرجى طلب رمز جديد.",
+  "verificationFailed": "فشل التحقق، يرجى المحاولة مرة أخرى.",
+  "verifyAndContinue": "تحقق وتابع",
+  "newCodeSent": "تم إرسال رمز جديد!",
+  "resendFailed": "فشل إعادة الإرسال: {e}",
+  "@resendFailed": {
+    "placeholders": {
+      "e": { "type": "String" }
+    }
+  },
+  "resendCode": "أعد إرسال الرمز",
+  "resendCodeIn": "أعد إرسال الرمز خلال {seconds}ث",
+  "@resendCodeIn": {
+    "placeholders": {
+      "seconds": { "type": "String" }
+    }
+  },
+
+  "pleaseEnterEmail": "يرجى إدخال بريدك الإلكتروني.",
+  "emailLabel": "البريد الإلكتروني",
+  "sendVerificationCode": "إرسال رمز التحقق",
+  "codeSent": "تم الإرسال! تحقق من بريدك الوارد.",
+  "sendError": "خطأ: {e}",
+  "@sendError": {
+    "placeholders": {
+      "e": { "type": "String" }
+    }
+  },
+  "continueAsGuest": "تابع كضيف",
+
+  "videoNotAllowed": "يرجى اختيار صورة وليس فيديو."
+}
