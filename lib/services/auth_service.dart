@@ -46,6 +46,11 @@ class AuthService {
     debugPrint('✅ User authenticated');
   }
 
+  Future<void> sendOtp(String email) => sendEmailCode(email);
+
+  Future<void> verifyOtp({required String email, required String code}) =>
+      verifyEmailCode(email: email, code: code);
+
   Future<void> signOut() async {
     await _client.auth.signOut();
   }
