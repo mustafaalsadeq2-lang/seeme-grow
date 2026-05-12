@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,74 +8,63 @@ import '../home_screen.dart';
 import '../onboarding_screen.dart';
 import 'sign_in_screen.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
-  Future<bool> _checkOnboardingCompleted() async {
-    debugPrint('🔐 [AuthGate] Checking onboarding status...');
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _onboardingCompleted = false;
+  bool _loading = true;
+  StreamSubscription<AuthState>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     final completed = prefs.getBool('onboarding_completed') ?? false;
-    debugPrint('🔐 [AuthGate] Onboarding completed: $completed');
-    return completed;
+
+    if (!mounted) return;
+    setState(() {
+      _onboardingCompleted = completed;
+      _loading = false;
+    });
+
+    // Only trigger a repaint on auth events — no data migration here.
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🔐 [AuthGate] build() called');
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    return Scaffold(
-      body: FutureBuilder<bool>(
-        future: _checkOnboardingCompleted(),
-        builder: (context, onboardingSnapshot) {
-          debugPrint('🔐 [AuthGate] FutureBuilder state: ${onboardingSnapshot.connectionState}');
+    if (!_onboardingCompleted) {
+      return const OnboardingScreen();
+    }
 
-          if (onboardingSnapshot.connectionState == ConnectionState.waiting) {
-            debugPrint('🔐 [AuthGate] Showing loading (onboarding check)');
-            return const Center(child: CircularProgressIndicator());
-          }
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      return const SignInScreen();
+    }
 
-          if (onboardingSnapshot.hasError) {
-            debugPrint('❌ [AuthGate] Onboarding error: ${onboardingSnapshot.error}');
-            return Center(child: Text('Error: ${onboardingSnapshot.error}'));
-          }
-
-          final onboardingCompleted = onboardingSnapshot.data ?? false;
-
-          if (!onboardingCompleted) {
-            debugPrint('🔐 [AuthGate] Showing OnboardingScreen');
-            return const OnboardingScreen();
-          }
-
-          debugPrint('🔐 [AuthGate] Checking auth state...');
-          return StreamBuilder<AuthState>(
-            stream: Supabase.instance.client.auth.onAuthStateChange,
-            builder: (context, snapshot) {
-              debugPrint('🔐 [AuthGate] StreamBuilder state: ${snapshot.connectionState}');
-
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                debugPrint('🔐 [AuthGate] Showing loading (auth check)');
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                debugPrint('❌ [AuthGate] Auth error: ${snapshot.error}');
-                return Center(child: Text('Auth Error: ${snapshot.error}'));
-              }
-
-              final session = snapshot.data?.session;
-              debugPrint('🔐 [AuthGate] Session: ${session != null ? "exists" : "null"}');
-
-              if (session == null) {
-                debugPrint('🔐 [AuthGate] Showing SignInScreen');
-                return const SignInScreen();
-              }
-
-              debugPrint('🔐 [AuthGate] Showing HomeScreen');
-              return const HomeScreen();
-            },
-          );
-        },
-      ),
-    );
+    return const HomeScreen();
   }
 }
