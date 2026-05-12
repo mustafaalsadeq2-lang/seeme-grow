@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/child.dart';
 import '../services/notification_service.dart';
 import '../storage/local_storage_service.dart';
 import '../utils/age_calculator.dart';
+import '../utils/app_tokens.dart';
 import 'add_child_screen.dart';
+import 'auth/sign_in_screen.dart';
 import 'edit_child_screen.dart';
 import 'settings_screen.dart';
 import 'timeline_screen.dart';
@@ -25,7 +29,23 @@ class _HomeScreenState extends State<HomeScreen>
   bool _syncing = false;
   late final AnimationController _entryController;
 
+  // ── Auth state ───────────────────────────────────────────────────────────
+  bool _guestModeEnabled    = false;
+  bool _isReviewerSignedIn  = false;
+  String? _reviewerEmail;
+  StreamSubscription<AuthState>? _authSub;
+
   SupabaseClient get _supabase => Supabase.instance.client;
+
+  bool get _isEffectivelySignedIn =>
+      _supabase.auth.currentSession != null || _isReviewerSignedIn;
+
+  String? get _effectiveEmail =>
+      _supabase.auth.currentUser?.email ?? _reviewerEmail;
+
+  bool get _isGuest => !_isEffectivelySignedIn && _guestModeEnabled;
+
+  // ── Init / dispose ────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -35,13 +55,16 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
+    _loadAuthFlags();
     _loadChildren();
-    _syncFromCloud(); // Phase 1: read-only
+    _syncFromCloud();
     _initNotifications();
+    _setupAuthStream();
   }
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _entryController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -50,30 +73,60 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _loadAuthFlags();
       _loadChildren();
       _syncFromCloud();
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Notifications
-  // ---------------------------------------------------------------------------
+  // ── Auth flags ────────────────────────────────────────────────────────────
+
+  Future<void> _loadAuthFlags() async {
+    final prefs        = await SharedPreferences.getInstance();
+    final isReviewer   = prefs.getBool('is_reviewer_signed_in') ?? false;
+    final reviewerEmail= prefs.getString('reviewer_email');
+    final guestMode    = prefs.getBool('is_guest_mode') ?? false;
+    final hasSession   = _supabase.auth.currentSession != null;
+
+    if (!mounted) return;
+    setState(() {
+      _isReviewerSignedIn = isReviewer;
+      _reviewerEmail      = reviewerEmail;
+      _guestModeEnabled   = guestMode && !hasSession && !isReviewer;
+    });
+  }
+
+  void _setupAuthStream() {
+    _authSub = _supabase.auth.onAuthStateChange.listen((data) {
+      if (!mounted) return;
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn) {
+        // Do NOT call _syncFromCloud() here — race condition with
+        // verify_code_screen's Keep & Sync / Start Fresh dialog.
+        _loadAuthFlags();
+        _loadChildren();
+      } else if (event == AuthChangeEvent.signedOut) {
+        _loadAuthFlags();
+        setState(() => _children = []);
+      } else {
+        _loadAuthFlags();
+      }
+    });
+  }
+
+  // ── Notifications ─────────────────────────────────────────────────────────
 
   Future<void> _initNotifications() async {
     await NotificationService.init();
     await NotificationService.testNotification();
   }
 
-  // ---------------------------------------------------------------------------
-  // Local
-  // ---------------------------------------------------------------------------
+  // ── Local data ────────────────────────────────────────────────────────────
 
   Future<void> _loadChildren() async {
     final children = await LocalStorageService.loadChildren();
 
-    children.sort(
-      (a, b) => b.birthDate.compareTo(a.birthDate),
-    );
+    children.sort((a, b) => b.birthDate.compareTo(a.birthDate));
 
     if (!mounted) return;
     setState(() => _children = children);
@@ -83,9 +136,7 @@ class _HomeScreenState extends State<HomeScreen>
     NotificationService.scheduleAll();
   }
 
-  // ---------------------------------------------------------------------------
-  // Cloud (Phase 1 – Read only)
-  // ---------------------------------------------------------------------------
+  // ── Cloud sync ────────────────────────────────────────────────────────────
 
   Future<void> _syncFromCloud() async {
     final user = _supabase.auth.currentUser;
@@ -99,12 +150,11 @@ class _HomeScreenState extends State<HomeScreen>
           .select()
           .eq('user_id', user.id);
 
-      final local = await LocalStorageService.loadChildren();
+      final local    = await LocalStorageService.loadChildren();
       final localIds = local.map((c) => c.localId).toSet();
 
       for (final row in response) {
         final cloudChild = Child.fromJson(row);
-
         if (!localIds.contains(cloudChild.localId)) {
           local.add(cloudChild);
         }
@@ -119,18 +169,35 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // AUTH
-  // ---------------------------------------------------------------------------
+  // ── Auth actions ──────────────────────────────────────────────────────────
 
   Future<void> _logout() async {
-    await _supabase.auth.signOut();
-    // AuthGate سيعيدك تلقائياً إلى LoginScreen
+    // Always clear local data on logout regardless of auth type.
+    await LocalStorageService.clearAll();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_guest_mode', true);
+    await prefs.setBool('is_reviewer_signed_in', false);
+    await prefs.remove('reviewer_email');
+    await prefs.remove('last_user_id');
+    await prefs.remove('_lastAuthUserId');
+
+    if (_isReviewerSignedIn) {
+      // Reviewer path — no real Supabase session to sign out from.
+      if (mounted) {
+        setState(() {
+          _isReviewerSignedIn = false;
+          _reviewerEmail      = null;
+          _guestModeEnabled   = true;
+          _children           = [];
+        });
+      }
+    } else {
+      await _supabase.auth.signOut();
+    }
   }
 
-  // ---------------------------------------------------------------------------
-  // Actions
-  // ---------------------------------------------------------------------------
+  // ── Navigation ────────────────────────────────────────────────────────────
 
   void _openSettings() {
     Navigator.push(
@@ -146,9 +213,7 @@ class _HomeScreenState extends State<HomeScreen>
     final result = await Navigator.push<Child?>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddChildScreen(
-          existingNames: existingNames,
-        ),
+        builder: (_) => AddChildScreen(existingNames: existingNames),
       ),
     );
 
@@ -162,14 +227,9 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _editChild(Child child) async {
     final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditChildScreen(child: child),
-      ),
+      MaterialPageRoute(builder: (_) => EditChildScreen(child: child)),
     );
-
-    if (changed == true) {
-      _loadChildren();
-    }
+    if (changed == true) _loadChildren();
   }
 
   Future<void> _deleteChild(Child child) async {
@@ -178,7 +238,8 @@ class _HomeScreenState extends State<HomeScreen>
       builder: (_) => AlertDialog(
         title: const Text('Remove child'),
         content: Text(
-          'This will permanently delete all memories for ${child.name}.\nThis action cannot be undone.',
+          'This will permanently delete all memories for ${child.name}.\n'
+          'This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -201,37 +262,30 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // UI helpers
-  // ---------------------------------------------------------------------------
+  // ── UI helpers ────────────────────────────────────────────────────────────
 
   static const _quotes = [
     'Every moment with your child is a memory worth keeping.',
-    'Children grow so fast \u2014 capture every smile.',
+    'Children grow so fast — capture every smile.',
     'The littlest feet make the biggest footprints in our hearts.',
-    'A child\u2019s laughter is the best sound in the world.',
-    'Today\u2019s little moments become tomorrow\u2019s precious memories.',
+    'A child’s laughter is the best sound in the world.',
+    'Today’s little moments become tomorrow’s precious memories.',
     'Watching you grow is the greatest adventure.',
-    'Every day is a new chapter in your child\u2019s story.',
+    'Every day is a new chapter in your child’s story.',
     'The best thing to spend on your child is time.',
     'In the eyes of a child, you will see the world as it should be.',
-    'Childhood is a short season \u2014 make it sweet.',
-    'One day you\u2019ll look back and realize these were the big moments.',
+    'Childhood is a short season — make it sweet.',
+    'One day you’ll look back and realize these were the big moments.',
     'Growth is a journey best measured in love.',
-    'Small hands, big dreams \u2014 capture them all.',
+    'Small hands, big dreams — capture them all.',
     'The days are long but the years are short.',
-    'Every photo tells a story of how much they\u2019ve grown.',
+    'Every photo tells a story of how much they’ve grown.',
   ];
 
   Color _avatarColor(String localId) {
     final colors = [
-      Colors.purple,
-      Colors.blue,
-      Colors.teal,
-      Colors.indigo,
-      Colors.orange,
-      Colors.pink,
-      Colors.green,
+      Colors.purple, Colors.blue, Colors.teal,
+      Colors.indigo, Colors.orange, Colors.pink, Colors.green,
     ];
     return colors[localId.hashCode.abs() % colors.length];
   }
@@ -253,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   int? _daysToNextBirthday() {
     if (_children.isEmpty) return null;
-    final now = DateTime.now();
+    final now   = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     int? minDays;
     for (final c in _children) {
@@ -278,19 +332,16 @@ class _HomeScreenState extends State<HomeScreen>
     return null;
   }
 
-  int _memoryCount(Child child) {
-    return child.yearPhotos.values.where((p) => p.trim().isNotEmpty).length;
-  }
+  int _memoryCount(Child child) =>
+      child.yearPhotos.values.where((p) => p.trim().isNotEmpty).length;
 
   String _dailyQuote() {
-    final now = DateTime.now();
+    final now       = DateTime.now();
     final dayOfYear = now.difference(DateTime(now.year)).inDays;
     return _quotes[dayOfYear % _quotes.length];
   }
 
-  // ---------------------------------------------------------------------------
-  // Animations
-  // ---------------------------------------------------------------------------
+  // ── Animations ────────────────────────────────────────────────────────────
 
   Animation<double> _stagger(double begin, double end) {
     return CurvedAnimation(
@@ -302,33 +353,55 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _animatedSlide(Animation<double> animation, Widget child) {
     return AnimatedBuilder(
       animation: animation,
-      builder: (context, ch) {
-        return Opacity(
-          opacity: animation.value,
-          child: Transform.translate(
-            offset: Offset(0, 30 * (1 - animation.value)),
-            child: ch,
-          ),
-        );
-      },
+      builder: (context, ch) => Opacity(
+        opacity: animation.value,
+        child: Transform.translate(
+          offset: Offset(0, 30 * (1 - animation.value)),
+          child: ch,
+        ),
+      ),
       child: child,
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // UI
-  // ---------------------------------------------------------------------------
+  // ── Top bar ───────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Children'),
-        actions: [
+  Widget _buildTopBar() {
+    final email   = _effectiveEmail;
+    final initial = (email != null && email.isNotEmpty)
+        ? email[0].toUpperCase()
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
+      child: Row(
+        children: [
+          Text(
+            'SeeMe',
+            style: serif(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: T.ink,
+            ),
+          ),
+          Text(
+            ' Grow',
+            style: serif(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              italic: true,
+              color: T.forest,
+            ),
+          ),
+          const Spacer(),
           if (_syncing)
             const Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Icon(Icons.sync, size: 18),
+              padding: EdgeInsets.only(right: 8),
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 1.5),
+              ),
             ),
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -336,54 +409,136 @@ class _HomeScreenState extends State<HomeScreen>
                 _openSettings();
               } else if (value == 'logout') {
                 _logout();
+              } else if (value == 'signin') {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const SignInScreen()),
+                  (route) => false,
+                );
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
+            itemBuilder: (_) => [
+              const PopupMenuItem(
                 value: 'settings',
                 child: Text('Settings'),
               ),
-              PopupMenuItem(
-                value: 'logout',
-                child: Text(
-                  'Logout',
-                  style: TextStyle(color: Colors.red),
+              if (_isEffectivelySignedIn)
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Text('Logout', style: TextStyle(color: Colors.red)),
+                )
+              else
+                const PopupMenuItem(
+                  value: 'signin',
+                  child: Text('Sign In'),
                 ),
-              ),
             ],
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: _isEffectivelySignedIn
+                  ? T.forest
+                  : Colors.grey.shade200,
+              child: initial != null
+                  ? Text(
+                      initial,
+                      style: TextStyle(
+                        color: _isEffectivelySignedIn
+                            ? Colors.white
+                            : T.ink3,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  : Icon(
+                      Icons.person,
+                      size: 18,
+                      color: _isEffectivelySignedIn ? Colors.white : T.ink3,
+                    ),
+            ),
           ),
         ],
-      ),
-      body: _children.isEmpty
-          ? _buildEmptyState()
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                _buildGreeting(),
-                const SizedBox(height: 16),
-                _buildStatsCard(),
-                const SizedBox(height: 24),
-                ..._children.asMap().entries.map(
-                      (e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildChildCard(e.value, e.key),
-                      ),
-                    ),
-                _buildQuote(),
-                const SizedBox(height: 80),
-              ],
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addChild,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Child'),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Greeting
-  // ---------------------------------------------------------------------------
+  // ── Camera pill (add button) ───────────────────────────────────────────────
+
+  Widget _buildCameraPill() {
+    return GestureDetector(
+      onTap: _addChild,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 15),
+        decoration: BoxDecoration(
+          color: T.ink,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Add Child',
+              style: serif(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar is ALWAYS rendered, regardless of children count.
+            _buildTopBar(),
+            const SizedBox(height: 8),
+
+            // Content area
+            Expanded(
+              child: _children.isEmpty
+                  ? _buildEmptyState()
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                      children: [
+                        _buildGreeting(),
+                        const SizedBox(height: 16),
+                        _buildStatsCard(),
+                        const SizedBox(height: 24),
+                        ..._children.asMap().entries.map(
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildChildCard(e.value, e.key),
+                              ),
+                            ),
+                        _buildQuote(),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _buildCameraPill(),
+    );
+  }
+
+  // ── Greeting ──────────────────────────────────────────────────────────────
 
   Widget _buildGreeting() {
     final theme = Theme.of(context);
@@ -413,12 +568,10 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Stats Card
-  // ---------------------------------------------------------------------------
+  // ── Stats card ────────────────────────────────────────────────────────────
 
   Widget _buildStatsCard() {
-    final theme = Theme.of(context);
+    final theme    = Theme.of(context);
     final memories = _totalMemories();
     final nextBday = _daysToNextBirthday();
 
@@ -433,18 +586,8 @@ class _HomeScreenState extends State<HomeScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _statColumn(
-              Icons.child_care,
-              '${_children.length}',
-              'Children',
-              theme,
-            ),
-            _statColumn(
-              Icons.photo_library_outlined,
-              '$memories',
-              'Memories',
-              theme,
-            ),
+            _statColumn(Icons.child_care, '${_children.length}', 'Children', theme),
+            _statColumn(Icons.photo_library_outlined, '$memories', 'Memories', theme),
             _statColumn(
               Icons.cake_outlined,
               nextBday != null ? '$nextBday' : '-',
@@ -457,12 +600,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _statColumn(
-    IconData icon,
-    String value,
-    String label,
-    ThemeData theme,
-  ) {
+  Widget _statColumn(IconData icon, String value, String label, ThemeData theme) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -488,28 +626,24 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Child Card
-  // ---------------------------------------------------------------------------
+  // ── Child card ────────────────────────────────────────────────────────────
 
   Widget _buildChildCard(Child child, int index) {
-    final theme = Theme.of(context);
-    final age = AgeCalculator.currentAge(child.birthDate);
-    final photo = _latestPhoto(child);
+    final theme    = Theme.of(context);
+    final age      = AgeCalculator.currentAge(child.birthDate);
+    final photo    = _latestPhoto(child);
     final memories = _memoryCount(child);
-    final color = _avatarColor(child.localId);
+    final color    = _avatarColor(child.localId);
 
     final begin = (0.25 + index * 0.08).clamp(0.0, 0.85);
-    final end = (begin + 0.4).clamp(0.0, 1.0);
+    final end   = (begin + 0.4).clamp(0.0, 1.0);
 
     return _animatedSlide(
       _stagger(begin, end),
       Card(
         elevation: 2,
         shadowColor: Colors.black.withValues(alpha: 0.1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () async {
@@ -525,13 +659,11 @@ class _HomeScreenState extends State<HomeScreen>
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Avatar with photo or initial
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: color,
-                  backgroundImage: photo != null
-                      ? FileImage(File(photo))
-                      : null,
+                  backgroundImage:
+                      photo != null ? FileImage(File(photo)) : null,
                   child: photo == null
                       ? Text(
                           child.name[0].toUpperCase(),
@@ -544,7 +676,6 @@ class _HomeScreenState extends State<HomeScreen>
                       : null,
                 ),
                 const SizedBox(width: 16),
-                // Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,26 +709,16 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
-                // Menu
                 PopupMenuButton<String>(
                   onSelected: (value) {
-                    if (value == 'edit') {
-                      _editChild(child);
-                    } else if (value == 'delete') {
-                      _deleteChild(child);
-                    }
+                    if (value == 'edit') { _editChild(child); }
+                    else if (value == 'delete') { _deleteChild(child); }
                   },
                   itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Edit'),
-                    ),
+                    PopupMenuItem(value: 'edit', child: Text('Edit')),
                     PopupMenuItem(
                       value: 'delete',
-                      child: Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
-                      ),
+                      child: Text('Delete', style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
@@ -609,9 +730,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Quote
-  // ---------------------------------------------------------------------------
+  // ── Quote ─────────────────────────────────────────────────────────────────
 
   Widget _buildQuote() {
     final theme = Theme.of(context);
@@ -633,9 +752,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Empty State
-  // ---------------------------------------------------------------------------
+  // ── Empty state ───────────────────────────────────────────────────────────
 
   Widget _buildEmptyState() {
     final theme = Theme.of(context);
@@ -687,9 +804,22 @@ class _HomeScreenState extends State<HomeScreen>
                 height: 1.5,
               ),
             ),
+            if (_isGuest) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Sign in to sync across devices.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: T.forest,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+
