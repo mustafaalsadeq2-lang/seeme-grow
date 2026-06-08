@@ -117,156 +117,163 @@ class _AddChildScreenState extends State<AddChildScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Serif heading ──────────────────────────────────────────────
-              Text(
-                'A new chapter',
-                style: serif(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w400,
-                  height: 1.1,
-                  color: T.ink,
-                ),
-              ),
-              Text(
-                'begins.',
-                style: serif(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                  italic: true,
-                  color: T.forest,
-                  height: 1.1,
-                ),
-              ),
-
-              const SizedBox(height: 44),
-
-              // ── Name field (borderless) ────────────────────────────────────
-              Text(
-                'NAME',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: T.ink3,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _nameController,
-                focusNode: _nameFocus,
-                textCapitalization: TextCapitalization.words,
-                style: serif(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: T.ink,
-                ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: "Child's name",
-                  hintStyle: serif(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
-                    color: T.ink4,
-                  ),
-                  errorText: _error,
-                  errorStyle: const TextStyle(fontSize: 12, color: Colors.red),
-                ),
-                onChanged: (_) {
-                  if (_error != null) setState(() => _error = null);
-                },
-                onSubmitted: (_) => _pickBirthDate(),
-              ),
-
-              const SizedBox(height: 32),
-
-              // ── Birth date (underline field) ───────────────────────────────
-              Text(
-                'BIRTH DATE',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: T.ink3,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _pickBirthDate,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: T.hairline, width: 1.5),
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: Row(
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          _birthDate == null
-                              ? 'Select birth date'
-                              : _formattedDate,
-                          style: TextStyle(
-                            fontSize: 17,
-                            color: _birthDate == null ? T.ink3 : T.ink,
-                            fontWeight: _birthDate == null
-                                ? FontWeight.w400
-                                : FontWeight.w500,
+                      // ── Serif heading ──────────────────────────────────────
+                      Text(
+                        'A new chapter',
+                        style: serif(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w400,
+                          height: 1.1,
+                          color: T.ink,
+                        ),
+                      ),
+                      Text(
+                        'begins.',
+                        style: serif(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w600,
+                          italic: true,
+                          color: T.forest,
+                          height: 1.1,
+                        ),
+                      ),
+
+                      const SizedBox(height: 44),
+
+                      // ── Name field (borderless) ────────────────────────────
+                      Text(
+                        'NAME',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: T.ink3,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _nameController,
+                        focusNode: _nameFocus,
+                        textCapitalization: TextCapitalization.words,
+                        style: serif(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          color: T.ink,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: "Child's name",
+                          hintStyle: serif(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w600,
+                            color: T.ink4,
+                          ),
+                          errorText: _error,
+                          errorStyle: const TextStyle(fontSize: 12, color: Colors.red),
+                        ),
+                        onChanged: (_) {
+                          if (_error != null) setState(() => _error = null);
+                        },
+                        onSubmitted: (_) => _pickBirthDate(),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // ── Birth date (underline field) ───────────────────────
+                      Text(
+                        'BIRTH DATE',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: T.ink3,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: _pickBirthDate,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: T.hairline, width: 1.5),
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _birthDate == null
+                                      ? 'Select birth date'
+                                      : _formattedDate,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    color: _birthDate == null ? T.ink3 : T.ink,
+                                    fontWeight: _birthDate == null
+                                        ? FontWeight.w400
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 18,
+                                color: _birthDate == null ? T.ink3 : T.forest,
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 18,
-                        color: _birthDate == null ? T.ink3 : T.forest,
-                      ),
+
+                      const SizedBox(height: 28),
+
+                      // ── Timeline preview chip ───────────────────────────────
+                      if (_name.isNotEmpty || _birthDate != null)
+                        AnimatedOpacity(
+                          opacity: (_name.isNotEmpty && _birthDate != null) ? 1.0 : 0.4,
+                          duration: const Duration(milliseconds: 200),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: T.forestSoft,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: T.forest.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome,
+                                  size: 13,
+                                  color: T.forest,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _name.isNotEmpty
+                                      ? "Begin $_name's story"
+                                      : "Begin their story",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: T.forest,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 28),
-
-              // ── Timeline preview chip ──────────────────────────────────────
-              if (_name.isNotEmpty || _birthDate != null)
-                AnimatedOpacity(
-                  opacity: (_name.isNotEmpty && _birthDate != null) ? 1.0 : 0.4,
-                  duration: const Duration(milliseconds: 200),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: T.forestSoft,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: T.forest.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 13,
-                          color: T.forest,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _name.isNotEmpty
-                              ? "Begin $_name's story"
-                              : "Begin their story",
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: T.forest,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              const Spacer(),
 
               // ── CTA button ─────────────────────────────────────────────────
               SizedBox(
