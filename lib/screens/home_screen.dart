@@ -172,9 +172,8 @@ class _HomeScreenState extends State<HomeScreen>
   // ── Auth actions ──────────────────────────────────────────────────────────
 
   Future<void> _logout() async {
-    // Always clear local data on logout regardless of auth type.
-    await LocalStorageService.clearAll();
-
+    // Do not clear local data on logout. Current production behavior keeps
+    // local children/photos because cloud sync is not yet a full upload path.
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_guest_mode', true);
     await prefs.setBool('is_reviewer_signed_in', false);
@@ -189,7 +188,6 @@ class _HomeScreenState extends State<HomeScreen>
           _isReviewerSignedIn = false;
           _reviewerEmail      = null;
           _guestModeEnabled   = true;
-          _children           = [];
         });
       }
     } else {

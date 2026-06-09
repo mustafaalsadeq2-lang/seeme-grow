@@ -128,9 +128,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirm != true || !mounted) return;
 
-    // Always clear ALL local data on logout.
-    await LocalStorageService.clearAll();
-
+    // Do not clear local data on logout. Current production behavior keeps
+    // local children/photos because cloud sync is not yet a full upload path.
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_guest_mode', true);
     await prefs.setBool('is_reviewer_signed_in', false);
