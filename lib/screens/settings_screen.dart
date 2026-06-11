@@ -10,6 +10,7 @@ import '../services/notification_service.dart';
 import '../storage/local_storage_service.dart';
 import '../utils/app_tokens.dart';
 import 'auth/sign_in_screen.dart';
+import 'paywall_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -437,11 +438,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 16),
           GestureDetector(
             onTap: () {
-              // Navigate to PaywallScreen when it is restored.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Paywall coming soon.'),
-                  behavior: SnackBarBehavior.floating,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PaywallScreen(),
                 ),
               );
             },
