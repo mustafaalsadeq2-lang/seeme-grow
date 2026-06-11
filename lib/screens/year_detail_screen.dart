@@ -93,13 +93,23 @@ class _YearDetailScreenState extends State<YearDetailScreen>
 
   int get _completedCount {
     final child = _freshChild ?? widget.child;
-    return child.yearPhotos.values.where((p) => p.trim().isNotEmpty).length;
+    return child.yearPhotos.values
+        .where((p) => p.trim().isNotEmpty && File(p).existsSync())
+        .length;
   }
 
   bool _hasPhotoForYear(int year) {
     final child = _freshChild ?? widget.child;
     final path  = child.yearPhotos[year];
-    return path != null && path.trim().isNotEmpty;
+    return path != null && path.trim().isNotEmpty && File(path).existsSync();
+  }
+
+  /// Whether the currently viewed year has a photo file that actually
+  /// exists on disk. A non-empty stored path whose file is missing is
+  /// treated the same as "no photo".
+  bool get _hasCurrentPhoto {
+    final path = _imagePath;
+    return path != null && path.trim().isNotEmpty && File(path).existsSync();
   }
 
   // ── Photo picking ──────────────────────────────────────────────────────────
@@ -245,7 +255,7 @@ class _YearDetailScreenState extends State<YearDetailScreen>
   }
 
   Widget _buildPhotoOrPlaceholder() {
-    if (_imagePath == null || _imagePath!.isEmpty) {
+    if (!_hasCurrentPhoto) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -276,16 +286,9 @@ class _YearDetailScreenState extends State<YearDetailScreen>
       );
     }
 
-    final file = File(_imagePath!);
-    if (!file.existsSync()) {
-      return const Center(
-        child: Text('Image not found', style: TextStyle(color: Colors.redAccent)),
-      );
-    }
-
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: Image.file(file, fit: BoxFit.contain),
+      child: Image.file(File(_imagePath!), fit: BoxFit.contain),
     );
   }
 
@@ -338,7 +341,7 @@ class _YearDetailScreenState extends State<YearDetailScreen>
                     ),
                     const SizedBox(width: 12),
                     _GlassButton(
-                      icon: _imagePath != null && _imagePath!.isNotEmpty
+                      icon: _hasCurrentPhoto
                           ? Icons.edit_outlined
                           : Icons.add_a_photo_outlined,
                       onTap: _loading ? null : _showPhotoOptions,

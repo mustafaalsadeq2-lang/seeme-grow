@@ -188,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen>
           _isReviewerSignedIn = false;
           _reviewerEmail      = null;
           _guestModeEnabled   = true;
+          _children           = [];
         });
       }
     } else {
@@ -197,11 +198,16 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
-  void _openSettings() {
-    Navigator.push(
+  Future<void> _openSettings() async {
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
+    if (!mounted) return;
+    // Reload auth flags after returning from settings so that a reviewer logout
+    // (which has no Supabase signedOut event) is reflected in this screen.
+    await _loadAuthFlags();
+    if (!_isEffectivelySignedIn) setState(() => _children = []);
   }
 
   Future<void> _addChild() async {
@@ -330,8 +336,9 @@ class _HomeScreenState extends State<HomeScreen>
     return null;
   }
 
-  int _memoryCount(Child child) =>
-      child.yearPhotos.values.where((p) => p.trim().isNotEmpty).length;
+  int _memoryCount(Child child) => child.yearPhotos.values
+      .where((p) => p.trim().isNotEmpty && File(p).existsSync())
+      .length;
 
   String _dailyQuote() {
     final now       = DateTime.now();

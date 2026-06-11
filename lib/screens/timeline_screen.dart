@@ -105,7 +105,7 @@ class _TimelineScreenState extends State<TimelineScreen>
 
   bool _hasPhoto(int year) {
     final path = _child?.yearPhotos[year];
-    return path != null && path.trim().isNotEmpty;
+    return path != null && path.trim().isNotEmpty && File(path).existsSync();
   }
 
   int get _completedYears => _lastCompletedYears;
