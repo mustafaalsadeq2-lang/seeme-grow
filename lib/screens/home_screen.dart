@@ -124,7 +124,16 @@ class _HomeScreenState extends State<HomeScreen>
   // ── Local data ────────────────────────────────────────────────────────────
 
   Future<void> _loadChildren() async {
-    final children = await LocalStorageService.loadChildren();
+    final all = await LocalStorageService.loadChildren();
+
+    // Hide children that belong to a signed-in account once that account
+    // is logged out. Local data is preserved on disk — it simply isn't
+    // shown until the same account signs back in. Guest-added children
+    // (userId == null) are never hidden, keeping guest mode intact.
+    final currentUserId = _supabase.auth.currentUser?.id;
+    final children = all
+        .where((c) => c.userId == null || c.userId == currentUserId)
+        .toList();
 
     children.sort((a, b) => b.birthDate.compareTo(a.birthDate));
 
@@ -193,6 +202,14 @@ class _HomeScreenState extends State<HomeScreen>
       }
     } else {
       await _supabase.auth.signOut();
+      // Clear the visible list immediately — don't wait on the auth
+      // stream event, which can race with a pending _syncFromCloud().
+      if (mounted) {
+        setState(() {
+          _guestModeEnabled = true;
+          _children         = [];
+        });
+      }
     }
   }
 
