@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 import '../services/notification_service.dart';
-import '../storage/local_storage_service.dart';
 import '../utils/app_tokens.dart';
 import 'auth/sign_in_screen.dart';
 import 'paywall_screen.dart';
@@ -537,45 +536,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Delete account ────────────────────────────────────────────────────────
 
   Future<void> _confirmDeleteAccount() async {
-    final confirm = await showDialog<bool>(
+    // TODO: Replace with Edge Function call once delete-account function is deployed.
+    // Temporary: inform the user to contact support instead of calling
+    // _supabase.auth.admin.deleteUser(), which requires a service_role key
+    // that must never ship in the app.
+    await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Account'),
         content: const Text(
-          'This will permanently delete your account and all data. '
-          'This cannot be undone.',
+          'Account deletion will be available soon.\n\n'
+          'For now, please contact support@seemegrow.app '
+          'to delete your account manually.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
           ),
         ],
       ),
     );
 
-    if (confirm != true || !mounted) return;
-
-    try {
-      await LocalStorageService.clearAll();
-      await _supabase.auth.admin.deleteUser(_supabase.auth.currentUser!.id);
-      await _supabase.auth.signOut();
-      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Delete failed: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    // ── Disabled until Edge Function is ready ─────────────────────────────
+    // TODO: Replace with Edge Function call once delete-account function is deployed.
+    // if (confirm != true || !mounted) return;
+    // try {
+    //   await LocalStorageService.clearAll();
+    //   await _supabase.auth.admin.deleteUser(_supabase.auth.currentUser!.id);
+    //   await _supabase.auth.signOut();
+    //   if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    // } catch (e) {
+    //   if (!mounted) return;
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(
+    //       content: Text('Delete failed: $e'),
+    //       backgroundColor: Colors.red,
+    //       behavior: SnackBarBehavior.floating,
+    //     ),
+    //   );
+    // }
   }
 
   // ── Shared row widgets ───────────────────────────────────────────────────
