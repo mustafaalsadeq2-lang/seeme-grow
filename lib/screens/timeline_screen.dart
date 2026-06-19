@@ -666,30 +666,30 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   // ── Import nudge ──────────────────────────────────────────────────────────
-
-  Widget _buildImportNudge() {
-    return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: T.forestSoft,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: T.forest.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.photo_library_outlined, color: T.forest, size: 20),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Import existing photos to fill in past years.',
-              style: TextStyle(fontSize: 13, color: T.forest),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // TODO: Re-enable when Smart Import MVP is built in v1.4
+  // Widget _buildImportNudge() {
+  //   return Container(
+  //     margin: const EdgeInsets.only(top: 8, bottom: 16),
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: T.forestSoft,
+  //       borderRadius: BorderRadius.circular(16),
+  //       border: Border.all(color: T.forest.withValues(alpha: 0.15)),
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         const Icon(Icons.photo_library_outlined, color: T.forest, size: 20),
+  //         const SizedBox(width: 12),
+  //         const Expanded(
+  //           child: Text(
+  //             'Import existing photos to fill in past years.',
+  //             style: TextStyle(fontSize: 13, color: T.forest),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // ── Animation helper ──────────────────────────────────────────────────────
 
@@ -780,14 +780,14 @@ class _TimelineScreenState extends State<TimelineScreen>
             ),
           ),
 
-          // Import nudge (when no photos yet)
-          if (_completedYears == 0)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildImportNudge(),
-              ),
-            ),
+          // TODO: Re-enable when Smart Import MVP is built in v1.4
+          // if (_completedYears == 0)
+          //   SliverToBoxAdapter(
+          //     child: Padding(
+          //       padding: const EdgeInsets.symmetric(horizontal: 20),
+          //       child: _buildImportNudge(),
+          //     ),
+          //   ),
 
           // "THE JOURNEY" section label
           SliverToBoxAdapter(
