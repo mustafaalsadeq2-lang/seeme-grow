@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -154,12 +155,13 @@ class _HomeScreenState extends State<HomeScreen>
     debugPrint('🔄 _syncFromCloud: user=${user.id}');
 
     try {
+      // ── Phase 1: Restore children ──────────────────────────────────────
       final response = await _supabase
           .from('children')
           .select()
           .eq('user_id', user.id);
 
-      debugPrint('🔄 _syncFromCloud: ${response.length} rows returned');
+      debugPrint('🔄 _syncFromCloud: ${response.length} child rows returned');
 
       final local    = await LocalStorageService.loadChildren();
       final localIds = local.map((c) => c.localId).toSet();
@@ -173,6 +175,84 @@ class _HomeScreenState extends State<HomeScreen>
       }
 
       await LocalStorageService.saveChildren(local);
+
+      // ── Phase 2: Restore photos ────────────────────────────────────────
+      // Map cloud child id → index in local list.
+      final cloudIdToIdx = <String, int>{};
+      for (final row in response) {
+        final cloudId = row['id'] as String?;
+        final localId = (row['local_id'] ?? row['localId']) as String?;
+        if (cloudId == null || localId == null) continue;
+        final idx = local.indexWhere((c) => c.localId == localId);
+        if (idx != -1) cloudIdToIdx[cloudId] = idx;
+      }
+
+      if (cloudIdToIdx.isNotEmpty) {
+        final inClause = '(${cloudIdToIdx.keys.join(',')})';
+        final photoRows = await _supabase
+            .from('year_photos')
+            .select()
+            .filter('child_id', 'in', inClause);
+
+        debugPrint('🔄 _syncFromCloud: ${photoRows.length} photo rows returned');
+
+        final appDir = await getApplicationDocumentsDirectory();
+        bool photosChanged = false;
+
+        for (final photoRow in photoRows) {
+          final childId = photoRow['child_id'] as String?;
+          final year    = photoRow['year'];
+          final imgPath = photoRow['image_path'] as String?;
+
+          debugPrint('  📸 child_id=$childId year=$year path=$imgPath');
+
+          if (childId == null || year == null || imgPath == null) continue;
+
+          final idx = cloudIdToIdx[childId];
+          if (idx == null) continue;
+
+          if (year is! int) continue;
+          final yearInt = year;
+
+          // Skip if a valid local file already exists for this year.
+          final existing = local[idx].yearPhotos[yearInt];
+          if (existing != null &&
+              existing.isNotEmpty &&
+              File(existing).existsSync()) {
+            debugPrint('  ⏭️ year $yearInt already local — skipping');
+            continue;
+          }
+
+          try {
+            final bytes = await _supabase.storage
+                .from('SeeMeGrow')
+                .download(imgPath);
+
+            final childDir =
+                Directory('${appDir.path}/${local[idx].localId}');
+            if (!await childDir.exists()) {
+              await childDir.create(recursive: true);
+            }
+
+            final ts = DateTime.now().millisecondsSinceEpoch;
+            final localFilePath =
+                '${childDir.path}/year_${yearInt}_$ts.jpg';
+            await File(localFilePath).writeAsBytes(bytes);
+
+            local[idx].yearPhotos[yearInt] = localFilePath;
+            photosChanged = true;
+
+            debugPrint('  ✅ Saved: year=$yearInt → $localFilePath');
+          } catch (e) {
+            debugPrint('  ⚠️ Failed year=$yearInt path=$imgPath: $e');
+          }
+        }
+
+        if (photosChanged) {
+          await LocalStorageService.saveChildren(local);
+        }
+      }
+
       await _loadChildren();
     } catch (e) {
       debugPrint('⚠️ _syncFromCloud failed: $e');

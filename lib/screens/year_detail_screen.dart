@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:seeme_grow_clean/l10n/app_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/child.dart';
 import '../storage/local_storage_service.dart';
@@ -162,6 +163,58 @@ class _YearDetailScreenState extends State<YearDetailScreen>
       final idx      = children.indexWhere((c) => c.localId == widget.child.localId);
       children[idx].yearPhotos[widget.year] = newPath;
       await LocalStorageService.saveChildren(children);
+
+      // ── Cloud photo sync (best-effort, non-blocking) ──────────────────────
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        try {
+          // 1. Resolve cloud child ID via local_id + user_id.
+          final childRow = await supabase
+              .from('children')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('local_id', widget.child.localId)
+              .maybeSingle();
+
+          if (childRow != null) {
+            final cloudChildId = childRow['id'] as String;
+
+            // 2. Upload image file to Supabase Storage.
+            final storagePath =
+                '${user.id}/$cloudChildId/year_${widget.year}.jpg';
+            await supabase.storage
+                .from('SeeMeGrow')
+                .upload(
+                  storagePath,
+                  File(newPath),
+                  fileOptions: const FileOptions(
+                    upsert: true,
+                    contentType: 'image/jpeg',
+                  ),
+                );
+            debugPrint('☁️ Photo uploaded: $storagePath');
+
+            // 3. Upsert year_photos row.
+            await supabase.from('year_photos').upsert(
+              {
+                'child_id'  : cloudChildId,
+                'user_id'   : user.id,
+                'year'      : widget.year,
+                'image_path': storagePath,
+                'sync_state': 'synced',
+              },
+              onConflict: 'child_id,year',
+            );
+            debugPrint('✅ year_photos upserted: year=${widget.year}');
+          } else {
+            debugPrint('⏭️ Photo sync skipped: child not in cloud yet');
+          }
+        } catch (e) {
+          // Non-fatal: local photo is already saved above.
+          debugPrint('⚠️ Photo cloud sync failed: $e');
+        }
+      }
 
       HapticFeedback.mediumImpact();
       await _loadFromStorage();
