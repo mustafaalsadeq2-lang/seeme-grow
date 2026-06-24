@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../models/child.dart';
 import '../storage/local_storage_service.dart';
@@ -26,7 +29,8 @@ class TimelineScreen extends StatefulWidget {
 class _TimelineScreenState extends State<TimelineScreen>
     with TickerProviderStateMixin {
   Child? _child;
-  bool _loading = true;
+  bool _loading   = true;
+  bool _importing = false;
   int _lastCompletedYears = 0;
 
   late AnimationController _progressController;
@@ -109,6 +113,117 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   int get _completedYears => _lastCompletedYears;
+
+  // ── Smart Import ──────────────────────────────────────────────────────────
+
+  Future<void> _importPhotos() async {
+    final picked = await ImagePicker().pickMultiImage();
+    if (picked.isEmpty || !mounted) return;
+
+    setState(() => _importing = true);
+
+    final child     = _child!;
+    final birthDate = child.birthDate;
+
+    // Group candidates: year → [(XFile, photoDate)]
+    final Map<int, List<(XFile, DateTime)>> candidates = {};
+    int skipped = 0;
+
+    for (final xfile in picked) {
+      // Read EXIF from file bytes.
+      final bytes = await File(xfile.path).readAsBytes();
+      final tags  = await readExifFromBytes(bytes);
+
+      // Prefer DateTimeOriginal; fall back to Image DateTime.
+      final rawTag = tags['EXIF DateTimeOriginal'] ?? tags['Image DateTime'];
+      if (rawTag == null) { skipped++; continue; }
+
+      // Parse "YYYY:MM:DD HH:MM:SS".
+      DateTime? photoDate;
+      try {
+        final s = rawTag.printable.trim().split(RegExp(r'[: ]'));
+        if (s.length >= 3) {
+          photoDate = DateTime(
+            int.parse(s[0]), int.parse(s[1]), int.parse(s[2]),
+            s.length > 3 ? int.tryParse(s[3]) ?? 0 : 0,
+            s.length > 4 ? int.tryParse(s[4]) ?? 0 : 0,
+            s.length > 5 ? int.tryParse(s[5]) ?? 0 : 0,
+          );
+        }
+      } catch (_) { /* parse failed */ }
+
+      if (photoDate == null || photoDate.isBefore(birthDate)) {
+        skipped++;
+        continue;
+      }
+
+      final year = (photoDate.difference(birthDate).inDays / 365.25).floor();
+      if (year < 0 || year > 18) { skipped++; continue; }
+
+      candidates.putIfAbsent(year, () => []).add((xfile, photoDate));
+    }
+
+    // Write winners to disk.
+    int imported = 0;
+
+    if (candidates.isNotEmpty) {
+      final children = await LocalStorageService.loadChildren();
+      final idx      = children.indexWhere((c) => c.localId == child.localId);
+
+      if (idx != -1) {
+        final appDir   = await getApplicationDocumentsDirectory();
+        final childDir = Directory('${appDir.path}/${child.localId}');
+        if (!await childDir.exists()) await childDir.create(recursive: true);
+
+        for (final entry in candidates.entries) {
+          final year = entry.key;
+          final list = entry.value;
+
+          // Skip years that already have a valid photo.
+          if (_hasPhoto(year)) { skipped += list.length; continue; }
+
+          // Take the earliest photo in this year.
+          list.sort((a, b) => a.$2.compareTo(b.$2));
+          skipped += list.length - 1; // extras discarded
+
+          final ts      = DateTime.now().millisecondsSinceEpoch;
+          final newPath = '${childDir.path}/year_${year}_$ts.jpg';
+          try {
+            await File(list.first.$1.path).copy(newPath);
+            children[idx].yearPhotos[year] = newPath;
+            imported++;
+          } catch (_) {
+            skipped++;
+          }
+        }
+
+        if (imported > 0) await LocalStorageService.saveChildren(children);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _importing = false);
+    await _loadChild();
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import Complete'),
+        content: Text(
+          'Imported $imported photo${imported == 1 ? '' : 's'}.\n'
+          'Skipped $skipped photo${skipped == 1 ? '' : 's'} '
+          '(no date, out of range, or year already filled).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ── Celebrate ─────────────────────────────────────────────────────────────
 
@@ -666,30 +781,45 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   // ── Import nudge ──────────────────────────────────────────────────────────
-  // TODO: Re-enable when Smart Import MVP is built in v1.4
-  // Widget _buildImportNudge() {
-  //   return Container(
-  //     margin: const EdgeInsets.only(top: 8, bottom: 16),
-  //     padding: const EdgeInsets.all(16),
-  //     decoration: BoxDecoration(
-  //       color: T.forestSoft,
-  //       borderRadius: BorderRadius.circular(16),
-  //       border: Border.all(color: T.forest.withValues(alpha: 0.15)),
-  //     ),
-  //     child: Row(
-  //       children: [
-  //         const Icon(Icons.photo_library_outlined, color: T.forest, size: 20),
-  //         const SizedBox(width: 12),
-  //         const Expanded(
-  //           child: Text(
-  //             'Import existing photos to fill in past years.',
-  //             style: TextStyle(fontSize: 13, color: T.forest),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+
+  Widget _buildImportNudge() {
+    return GestureDetector(
+      onTap: _importing ? null : _importPhotos,
+      child: Container(
+        margin: const EdgeInsets.only(top: 8, bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: T.forestSoft,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: T.forest.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          children: [
+            if (_importing)
+              const SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2, color: T.forest,
+                ),
+              )
+            else
+              const Icon(Icons.photo_library_outlined, color: T.forest, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _importing
+                    ? 'Importing photos…'
+                    : 'Import existing photos to fill in past years.',
+                style: const TextStyle(fontSize: 13, color: T.forest),
+              ),
+            ),
+            if (!_importing)
+              const Icon(Icons.chevron_right, color: T.forest, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ── Animation helper ──────────────────────────────────────────────────────
 
@@ -780,14 +910,13 @@ class _TimelineScreenState extends State<TimelineScreen>
             ),
           ),
 
-          // TODO: Re-enable when Smart Import MVP is built in v1.4
-          // if (_completedYears == 0)
-          //   SliverToBoxAdapter(
-          //     child: Padding(
-          //       padding: const EdgeInsets.symmetric(horizontal: 20),
-          //       child: _buildImportNudge(),
-          //     ),
-          //   ),
+          if (_completedYears < 18)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildImportNudge(),
+              ),
+            ),
 
           // "THE JOURNEY" section label
           SliverToBoxAdapter(

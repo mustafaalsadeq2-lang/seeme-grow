@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/child.dart';
 import '../storage/local_storage_service.dart';
@@ -64,6 +65,31 @@ class _EditChildScreenState extends State<EditChildScreen> {
       );
 
       await LocalStorageService.updateChild(updatedChild);
+
+      // Attempt cloud update if signed in.
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        try {
+          await Supabase.instance.client
+              .from('children')
+              .update({
+                'name'      : updatedChild.name,
+                'birth_date': updatedChild.birthDate.toIso8601String(),
+              })
+              .eq('user_id', user.id)
+              .eq('local_id', updatedChild.localId);
+
+          await LocalStorageService.updateChild(
+            updatedChild.copyWith(syncState: SyncState.synced),
+          );
+          debugPrint('✅ Child update synced: ${updatedChild.name}');
+        } catch (e) {
+          debugPrint('⚠️ Child cloud update failed: $e');
+          await LocalStorageService.updateChild(
+            updatedChild.copyWith(syncState: SyncState.failed),
+          );
+        }
+      }
 
       if (mounted) {
         Navigator.pop(context, true);

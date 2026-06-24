@@ -149,10 +149,10 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('You have local memories on this device'),
+        title: const Text('Keep your local memories?'),
         content: const Text(
-          'Would you like to keep them and sync to your account, '
-          'or start fresh?',
+          'You can keep the memories saved on this device with this '
+          'account, or start fresh.',
         ),
         actions: [
           TextButton(
@@ -161,7 +161,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Keep & Sync'),
+            child: const Text('Keep'),
           ),
         ],
       ),

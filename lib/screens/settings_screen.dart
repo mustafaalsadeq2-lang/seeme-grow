@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 import '../services/notification_service.dart';
+import '../storage/local_storage_service.dart';
 import '../utils/app_tokens.dart';
 import 'auth/sign_in_screen.dart';
 import 'paywall_screen.dart';
@@ -157,6 +158,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ── Clear data & reset ───────────────────────────────────────────────────
+
+  Future<void> _clearDataAndReset() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Data & Reset'),
+        content: const Text(
+          'This will delete all local children and photos from this device. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    try {
+      await LocalStorageService.clearAll();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_guest_mode', true);
+      await prefs.setBool('is_reviewer_signed_in', false);
+      await prefs.remove('reviewer_email');
+      await prefs.remove('last_user_id');
+      await prefs.remove('_lastAuthUserId');
+
+      if (_supabase.auth.currentSession != null) {
+        await _supabase.auth.signOut();
+      }
+
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reset failed: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   // ── URL launcher ──────────────────────────────────────────────────────────
 
   Future<void> _launchUrl(String url) async {
@@ -269,14 +324,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _sectionLabel('ACCOUNT'),
             const SizedBox(height: 8),
             _buildTapRow(
-              icon: Icons.login,
-              title: 'Sign In',
-              onTap: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const SignInScreen()),
-                  (route) => false,
-                );
-              },
+              icon: Icons.delete_sweep_outlined,
+              title: 'Clear Data & Reset',
+              subtitle: 'Delete all local data and sign out',
+              destructive: true,
+              onTap: _clearDataAndReset,
             ),
           ],
 
@@ -344,7 +396,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  'Sign in to sync across devices',
+                  'Use your account for future sync features',
                   style: TextStyle(fontSize: 13, color: T.ink3),
                 ),
               ],
@@ -536,46 +588,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Delete account ────────────────────────────────────────────────────────
 
   Future<void> _confirmDeleteAccount() async {
-    // TODO: Replace with Edge Function call once delete-account function is deployed.
-    // Temporary: inform the user to contact support instead of calling
-    // _supabase.auth.admin.deleteUser(), which requires a service_role key
-    // that must never ship in the app.
-    await showDialog<void>(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Account'),
         content: const Text(
-          'Account deletion will be available soon.\n\n'
-          'For now, please contact support@seemegrow.app '
-          'to delete your account manually.',
+          'This will permanently delete your account and all data including '
+          'children, photos, and memories. This cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete Account'),
           ),
         ],
       ),
     );
 
-    // ── Disabled until Edge Function is ready ─────────────────────────────
-    // TODO: Replace with Edge Function call once delete-account function is deployed.
-    // if (confirm != true || !mounted) return;
-    // try {
-    //   await LocalStorageService.clearAll();
-    //   await _supabase.auth.admin.deleteUser(_supabase.auth.currentUser!.id);
-    //   await _supabase.auth.signOut();
-    //   if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
-    // } catch (e) {
-    //   if (!mounted) return;
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(
-    //       content: Text('Delete failed: $e'),
-    //       backgroundColor: Colors.red,
-    //       behavior: SnackBarBehavior.floating,
-    //     ),
-    //   );
-    // }
+    if (confirm != true || !mounted) return;
+
+    // Step 1 — delete cloud data (best-effort; RLS may limit what's reachable).
+    // TODO: Replace with Edge Function call once delete-account function is deployed
+    //       so that the Supabase Auth record is also removed server-side.
+    bool cloudFailed = false;
+    try {
+      final userId = _supabase.auth.currentUser!.id;
+      await _supabase.from('year_photos').delete().eq('user_id', userId);
+      await _supabase.from('children').delete().eq('user_id', userId);
+    } catch (_) {
+      cloudFailed = true;
+    }
+
+    // Step 2 — local cleanup + sign out.
+    // If this fails, keep the user signed in so they can try again.
+    try {
+      await LocalStorageService.clearAll();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_guest_mode', true);
+      await prefs.setBool('is_reviewer_signed_in', false);
+      await prefs.remove('reviewer_email');
+      await prefs.remove('last_user_id');
+      await prefs.remove('_lastAuthUserId');
+
+      await _supabase.auth.signOut();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "We couldn't complete account deletion. "
+            'Please contact support@seemegrow.app.',
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    // If cloud rows couldn't be deleted, inform the user before navigating away.
+    // The root ScaffoldMessenger persists across route changes so the SnackBar
+    // will still be visible on the Home screen after popUntil.
+    if (cloudFailed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "We couldn't complete account deletion. "
+            'Please contact support@seemegrow.app.',
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   // ── Shared row widgets ───────────────────────────────────────────────────
@@ -643,6 +738,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    String? subtitle,
     bool destructive = false,
   }) {
     final color = destructive ? Colors.red : T.ink;
@@ -658,14 +754,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icon(icon, color: iconColor, size: 22),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: color,
-                ),
-              ),
+              child: subtitle != null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: color,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(fontSize: 12, color: T.ink3),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: color,
+                      ),
+                    ),
             ),
             Icon(Icons.chevron_right, color: T.ink4, size: 20),
           ],

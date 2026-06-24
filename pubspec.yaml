@@ -48,6 +48,7 @@ dependencies:
   path_provider: ^2.1.2
   image_picker: ^1.0.7
   file_selector: ^1.0.3
+  exif: ^3.3.0
 
   # Share
   share_plus: ^7.2.1

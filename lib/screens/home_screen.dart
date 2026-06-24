@@ -101,10 +101,9 @@ class _HomeScreenState extends State<HomeScreen>
       if (!mounted) return;
       final event = data.event;
       if (event == AuthChangeEvent.signedIn) {
-        // Do NOT call _syncFromCloud() here — race condition with
-        // verify_code_screen's Keep & Sync / Start Fresh dialog.
         _loadAuthFlags();
-        _loadChildren();
+        _loadChildren();   // show any existing local data immediately
+        _syncFromCloud();  // then merge cloud data in background
       } else if (event == AuthChangeEvent.signedOut) {
         _loadAuthFlags();
         setState(() => _children = []);
@@ -152,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (user == null || _syncing) return;
 
     setState(() => _syncing = true);
+    debugPrint('🔄 _syncFromCloud: user=${user.id}');
 
     try {
       final response = await _supabase
@@ -159,11 +159,14 @@ class _HomeScreenState extends State<HomeScreen>
           .select()
           .eq('user_id', user.id);
 
+      debugPrint('🔄 _syncFromCloud: ${response.length} rows returned');
+
       final local    = await LocalStorageService.loadChildren();
       final localIds = local.map((c) => c.localId).toSet();
 
       for (final row in response) {
         final cloudChild = Child.fromJson(row);
+        debugPrint('  → ${cloudChild.name} (local_id=${cloudChild.localId})');
         if (!localIds.contains(cloudChild.localId)) {
           local.add(cloudChild);
         }
@@ -171,8 +174,8 @@ class _HomeScreenState extends State<HomeScreen>
 
       await LocalStorageService.saveChildren(local);
       await _loadChildren();
-    } catch (_) {
-      // silent fail
+    } catch (e) {
+      debugPrint('⚠️ _syncFromCloud failed: $e');
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
@@ -238,11 +241,52 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
-    if (result != null) {
-      await LocalStorageService.addChild(result);
-      await NotificationService.scheduleAll();
-      _loadChildren();
+    if (result == null) return;
+
+    // 1. Save locally first — always succeeds regardless of connectivity.
+    await LocalStorageService.addChild(result);
+
+    // 2. Attempt cloud upsert if signed in.
+    final user = _supabase.auth.currentUser;
+    if (user != null) {
+      try {
+        final response = await _supabase
+            .from('children')
+            .upsert(
+              {
+                'user_id'   : user.id,
+                'local_id'  : result.localId,
+                'name'      : result.name,
+                'birth_date': result.birthDate.toIso8601String(),
+              },
+              onConflict: 'local_id,user_id',
+            )
+            .select('id')
+            .single();
+
+        final cloudId = response['id'] as String;
+        await LocalStorageService.updateChild(
+          result.copyWith(
+            userId    : user.id,
+            cloudId   : cloudId,
+            syncState : SyncState.synced,
+          ),
+        );
+        debugPrint('✅ Child synced to cloud: ${result.name} → $cloudId');
+      } catch (e) {
+        // Non-fatal: child is already saved locally above.
+        debugPrint('⚠️ Child cloud sync failed: $e');
+        await LocalStorageService.updateChild(
+          result.copyWith(
+            userId   : user.id,
+            syncState: SyncState.failed,
+          ),
+        );
+      }
     }
+
+    await NotificationService.scheduleAll();
+    _loadChildren();
   }
 
   Future<void> _editChild(Child child) async {
@@ -279,6 +323,22 @@ class _HomeScreenState extends State<HomeScreen>
     if (confirm == true) {
       await NotificationService.cancelForChild(child.localId);
       await LocalStorageService.deleteChild(child.localId);
+
+      // Best-effort cloud delete — local delete already committed above.
+      final user = _supabase.auth.currentUser;
+      if (user != null) {
+        try {
+          await _supabase
+              .from('children')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('local_id', child.localId);
+          debugPrint('✅ Child deleted from cloud: ${child.name}');
+        } catch (e) {
+          debugPrint('⚠️ Child cloud delete failed: $e');
+        }
+      }
+
       _loadChildren();
     }
   }
@@ -829,7 +889,7 @@ class _HomeScreenState extends State<HomeScreen>
             if (_isGuest) ...[
               const SizedBox(height: 24),
               Text(
-                'Sign in to sync across devices.',
+                'Sign in to keep your account ready.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,

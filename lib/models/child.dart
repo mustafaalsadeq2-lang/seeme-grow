@@ -58,29 +58,47 @@ class Child {
       });
     }
 
-    return Child(
-      // 🔁 Backward compatibility:
-      // older data used `id`
-      localId: (json['localId'] ?? json['id']) as String,
+    // Supabase rows use snake_case; local storage uses camelCase.
+    // 'local_id' is only present in Supabase responses.
+    final isCloudRow = json.containsKey('local_id');
 
-      cloudId: json['cloudId'] as String?,
-      userId: json['userId'] as String?,
+    return Child(
+      // Supabase: local_id | local storage: localId | legacy: id
+      localId: (json['local_id'] ?? json['localId'] ?? json['id']) as String,
+
+      // Supabase 'id' is the cloud primary key; local storage has 'cloudId'
+      cloudId: isCloudRow
+          ? json['id'] as String?
+          : json['cloudId'] as String?,
+
+      // Supabase: user_id | local storage: userId
+      userId: (json['user_id'] ?? json['userId']) as String?,
 
       name: json['name'] as String,
-      birthDate: DateTime.parse(json['birthDate']),
+
+      // Supabase: birth_date | local storage: birthDate
+      birthDate: DateTime.parse(
+        (json['birth_date'] ?? json['birthDate']) as String,
+      ),
 
       yearPhotos: parsedYearPhotos,
 
-      // 🔄 Sync fields (safe defaults for old data)
+      // Supabase: sync_state | local storage: syncState
       syncState: SyncState.values.firstWhere(
-        (e) => e.name == json['syncState'],
-        orElse: () =>
-            (json['cloudId'] != null ? SyncState.synced : SyncState.pending),
+        (e) => e.name == (json['sync_state'] ?? json['syncState']),
+        orElse: () => isCloudRow
+            ? SyncState.synced
+            : (json['cloudId'] != null ? SyncState.synced : SyncState.pending),
       ),
 
+      // Supabase: updated_at / created_at | local storage: updatedAt
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : DateTime.now(),
+          ? DateTime.parse(json['updatedAt'] as String)
+          : json['updated_at'] != null
+              ? DateTime.parse(json['updated_at'] as String)
+              : json['created_at'] != null
+                  ? DateTime.parse(json['created_at'] as String)
+                  : DateTime.now(),
     );
   }
 
