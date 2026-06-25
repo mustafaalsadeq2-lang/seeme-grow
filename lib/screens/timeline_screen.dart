@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/child.dart';
 import '../storage/local_storage_service.dart';
@@ -175,6 +176,24 @@ class _TimelineScreenState extends State<TimelineScreen>
         final childDir = Directory('${appDir.path}/${child.localId}');
         if (!await childDir.exists()) await childDir.create(recursive: true);
 
+        // Resolve cloud child ID once before the loop.
+        final supabase = Supabase.instance.client;
+        final user     = supabase.auth.currentUser;
+        String? cloudChildId;
+        if (user != null) {
+          try {
+            final row = await supabase
+                .from('children')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('local_id', child.localId)
+                .maybeSingle();
+            cloudChildId = row?['id'] as String?;
+          } catch (e) {
+            debugPrint('⚠️ Smart Import: cloud child lookup failed: $e');
+          }
+        }
+
         for (final entry in candidates.entries) {
           final year = entry.key;
           final list = entry.value;
@@ -192,6 +211,38 @@ class _TimelineScreenState extends State<TimelineScreen>
             await File(list.first.$1.path).copy(newPath);
             children[idx].yearPhotos[year] = newPath;
             imported++;
+
+            // Cloud upload — best-effort, never breaks local import.
+            if (user != null && cloudChildId != null) {
+              try {
+                final storagePath =
+                    '${user.id}/$cloudChildId/year_$year.jpg';
+                await supabase.storage
+                    .from('SeeMeGrow')
+                    .upload(
+                      storagePath,
+                      File(newPath),
+                      fileOptions: const FileOptions(
+                        upsert: true,
+                        contentType: 'image/jpeg',
+                      ),
+                    );
+                await supabase.from('year_photos').upsert(
+                  {
+                    'child_id'  : cloudChildId,
+                    'user_id'   : user.id,
+                    'year'      : year,
+                    'image_path': storagePath,
+                    'sync_state': 'synced',
+                  },
+                  onConflict: 'child_id,year',
+                );
+                debugPrint('☁️ Smart Import: year $year uploaded');
+              } catch (e) {
+                debugPrint(
+                    '⚠️ Smart Import: cloud upload failed year=$year: $e');
+              }
+            }
           } catch (_) {
             skipped++;
           }
