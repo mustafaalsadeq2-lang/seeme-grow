@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -108,20 +109,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Logout ────────────────────────────────────────────────────────────────
 
   Future<void> _handleLogout() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(l10n.logoutConfirmTitle),
+        content: Text(l10n.logoutConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Logout'),
+            child: Text(l10n.logoutAction),
           ),
         ],
       ),
@@ -149,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Logout failed: $e'),
+            content: Text(l10n.logoutFailed(e.toString())),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -161,23 +163,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Clear data & reset ───────────────────────────────────────────────────
 
   Future<void> _clearDataAndReset() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear Data & Reset'),
-        content: const Text(
-          'This will delete all local children and photos from this device. '
-          'This cannot be undone.',
-        ),
+        title: Text(l10n.clearDataTitle),
+        content: Text(l10n.clearDataContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear'),
+            child: Text(l10n.clearAction),
           ),
         ],
       ),
@@ -204,7 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Reset failed: $e'),
+          content: Text(AppLocalizations.of(context)!.resetFailed(e.toString())),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -222,7 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not open $url'),
+          content: Text(AppLocalizations.of(context)!.couldNotOpenUrl(url)),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -233,9 +233,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Settings', style: serif(fontSize: 18, fontWeight: FontWeight.w600)),
+        title: Text(l10n.settingsTitle, style: serif(fontSize: 18, fontWeight: FontWeight.w600)),
         elevation: 0,
       ),
       body: ListView(
@@ -246,31 +247,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // ── Preferences ─────────────────────────────────────────────────
-          _sectionLabel('PREFERENCES'),
+          _sectionLabel(l10n.preferences),
           const SizedBox(height: 8),
           _buildSwitchRow(
             icon: Icons.notifications_outlined,
-            title: 'Birthday Reminders',
-            subtitle: 'Get notified before birthdays',
+            title: l10n.birthdayReminders,
+            subtitle: l10n.birthdayRemindersSubtitle,
             value: _notificationsEnabled,
             onChanged: _toggleNotifications,
           ),
           const SizedBox(height: 10),
           _buildSwitchRow(
             icon: Icons.dark_mode_outlined,
-            title: 'Dark Mode',
-            subtitle: 'Switch to dark theme',
+            title: l10n.darkMode,
+            subtitle: l10n.darkModeSubtitle,
             value: _darkMode,
             onChanged: (v) => _toggleDarkMode(v),
           ),
           const SizedBox(height: 24),
 
           // ── Legal ────────────────────────────────────────────────────────
-          _sectionLabel('LEGAL'),
+          _sectionLabel(l10n.legal),
           const SizedBox(height: 8),
           _buildTapRow(
             icon: Icons.privacy_tip_outlined,
-            title: 'Privacy Policy',
+            title: l10n.privacyPolicy,
             onTap: () => _launchUrl(
               'https://mustafaalsadeq2-lang.github.io/seeme-grow/privacy_policy.html',
             ),
@@ -278,7 +279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 10),
           _buildTapRow(
             icon: Icons.description_outlined,
-            title: 'Terms of Service',
+            title: l10n.termsOfService,
             onTap: () => _launchUrl(
               'https://mustafaalsadeq2-lang.github.io/seeme-grow/terms_of_service.html',
             ),
@@ -286,13 +287,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 10),
           _buildTapRow(
             icon: Icons.support_agent_outlined,
-            title: 'Support',
+            title: l10n.support,
             onTap: () => _launchUrl('mailto:support@seemegrow.app'),
           ),
           const SizedBox(height: 10),
           _buildTapRow(
             icon: Icons.favorite_outline,
-            title: 'About SeeMeGrow',
+            title: l10n.aboutApp,
             onTap: () => showAboutDialog(
               context: context,
               applicationName: 'SeeMeGrow',
@@ -305,28 +306,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           // ── Account actions ──────────────────────────────────────────────
           if (_isSignedIn) ...[
-            _sectionLabel('ACCOUNT'),
+            _sectionLabel(l10n.account),
             const SizedBox(height: 8),
             _buildTapRow(
               icon: Icons.logout,
-              title: 'Logout',
+              title: l10n.logoutAction,
               destructive: true,
               onTap: _handleLogout,
             ),
             const SizedBox(height: 10),
             _buildTapRow(
               icon: Icons.delete_outline,
-              title: 'Delete Account',
+              title: l10n.deleteAccountTitle,
               destructive: true,
               onTap: _confirmDeleteAccount,
             ),
           ] else ...[
-            _sectionLabel('ACCOUNT'),
+            _sectionLabel(l10n.account),
             const SizedBox(height: 8),
             _buildTapRow(
               icon: Icons.delete_sweep_outlined,
-              title: 'Clear Data & Reset',
-              subtitle: 'Delete all local data and sign out',
+              title: l10n.clearDataTitle,
+              subtitle: l10n.clearDataSubtitle,
               destructive: true,
               onTap: _clearDataAndReset,
             ),
@@ -386,18 +387,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Guest Mode',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.guestMode,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: T.ink,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Use your account for future sync features',
-                  style: TextStyle(fontSize: 13, color: T.ink3),
+                Text(
+                  AppLocalizations.of(context)!.guestModeSubtitle,
+                  style: const TextStyle(fontSize: 13, color: T.ink3),
                 ),
               ],
             ),
@@ -417,9 +418,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              'Sign In',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            child: Text(
+              AppLocalizations.of(context)!.signInAction,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -472,9 +473,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: T.forestSoft,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        'Free',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.freeBadge,
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: T.forest,
@@ -506,9 +507,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Upgrade to Pro',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.upgradeToPro,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -588,23 +589,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Delete account ────────────────────────────────────────────────────────
 
   Future<void> _confirmDeleteAccount() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'This will permanently delete your account and all data including '
-          'children, photos, and memories. This cannot be undone.',
-        ),
+        title: Text(l10n.deleteAccountTitle),
+        content: Text(l10n.deleteAccountContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete Account'),
+            child: Text(l10n.deleteAccountAction),
           ),
         ],
       ),
@@ -640,11 +639,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "We couldn't complete account deletion. "
-            'Please contact support@seemegrow.app.',
-          ),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.accountDeletionFailed),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -659,11 +655,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // will still be visible on the Home screen after popUntil.
     if (cloudFailed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "We couldn't complete account deletion. "
-            'Please contact support@seemegrow.app.',
-          ),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.accountDeletionFailed),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),

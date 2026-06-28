@@ -1,3 +1,5 @@
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
+
 class AgeResult {
   final int years;
   final int months;
@@ -8,6 +10,14 @@ class AgeResult {
     required this.months,
     required this.days,
   });
+
+  String format(AppLocalizations l10n) {
+    final parts = <String>[];
+    if (years > 0) parts.add('$years ${years == 1 ? l10n.ageYearSingular : l10n.ageYearsPlural}');
+    if (months > 0) parts.add('$months ${months == 1 ? l10n.ageMonthSingular : l10n.ageMonthsPlural}');
+    if (days > 0) parts.add('$days ${days == 1 ? l10n.ageDaySingular : l10n.ageDaysPlural}');
+    return parts.isEmpty ? l10n.ageNewborn : parts.join(' · ');
+  }
 
   @override
   String toString() {

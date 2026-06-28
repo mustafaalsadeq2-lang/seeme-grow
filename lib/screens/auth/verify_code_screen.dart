@@ -148,23 +148,23 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
     final keepData = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Keep your local memories?'),
-        content: const Text(
-          'You can keep the memories saved on this device with this '
-          'account, or start fresh.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Start Fresh'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Keep'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.keepMemoriesTitle),
+          content: Text(l10n.keepMemoriesContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.keepMemoriesStartFresh),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.keepMemoriesKeep),
+            ),
+          ],
+        );
+      },
     );
 
     if (keepData == true) {

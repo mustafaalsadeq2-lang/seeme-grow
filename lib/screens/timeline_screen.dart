@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/child.dart';
@@ -257,19 +258,16 @@ class _TimelineScreenState extends State<TimelineScreen>
     await _loadChild();
 
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Import Complete'),
-        content: Text(
-          'Imported $imported photo${imported == 1 ? '' : 's'}.\n'
-          'Skipped $skipped photo${skipped == 1 ? '' : 's'} '
-          '(no date, out of range, or year already filled).',
-        ),
+        title: Text(l10n.importCompleteTitle),
+        content: Text(l10n.importResult(imported, skipped)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+            child: Text(l10n.ok),
           ),
         ],
       ),
@@ -280,15 +278,16 @@ class _TimelineScreenState extends State<TimelineScreen>
 
   void _celebrate({required int previous, required int current}) {
     HapticFeedback.lightImpact();
+    final l10n = AppLocalizations.of(context)!;
     final String message;
     if (current == 1) {
-      message = '✨ First memory saved';
+      message = l10n.firstMemorySaved;
     } else if (current == 19) {
-      message = '🏁 All memories completed\nA lifetime captured';
+      message = l10n.allMemoriesComplete;
     } else if (current == _currentYear + 1) {
-      message = '🎉 Year $_currentYear completed';
+      message = l10n.yearCompleted(_currentYear);
     } else {
-      message = '💜 Memory saved';
+      message = l10n.memorySavedSnack;
     }
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
@@ -467,6 +466,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   Widget _buildProgressHeader() {
     final completed = _completedYears;
     final percent   = (completed / 19 * 100).round();
+    final l10n      = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -476,7 +476,7 @@ class _TimelineScreenState extends State<TimelineScreen>
           Row(
             children: [
               Text(
-                '$completed of 19 memories',
+                l10n.nOfNineteen(completed),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -506,7 +506,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: FractionallySizedBox(
                     widthFactor: (target * _progressAnimation.value)
                         .clamp(0.0, 1.0),
@@ -559,14 +559,15 @@ class _TimelineScreenState extends State<TimelineScreen>
                     ),
                   ),
                   // Birth label
-                  Positioned(
+                  Positioned.directional(
+                    textDirection: Directionality.of(context),
                     bottom: 20,
-                    left: 20,
+                    start: 20,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Birth',
+                          AppLocalizations.of(context)!.birth,
                           style: serif(
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
@@ -606,9 +607,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                             ),
                           ),
                           const SizedBox(width: 5),
-                          const Text(
-                            'Captured',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.capturedLabel,
+                            style: const TextStyle(
                               fontSize: 11,
                               color: Colors.white,
                               fontWeight: FontWeight.w500,
@@ -640,7 +641,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Add birth photo',
+                    AppLocalizations.of(context)!.addBirthPhoto,
                     style: serif(
                       fontSize: 15,
                       color: T.ink3,
@@ -697,7 +698,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                     Row(
                       children: [
                         Text(
-                          'Year $year',
+                          AppLocalizations.of(context)!.yearN(year),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -713,9 +714,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                               color: T.forest,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              'NOW',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context)!.nowLabel,
+                              style: const TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
@@ -746,9 +747,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Text(
-                            'Captured',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.capturedLabel,
+                            style: const TextStyle(
                               fontSize: 12,
                               color: T.forest,
                               fontWeight: FontWeight.w500,
@@ -757,18 +758,18 @@ class _TimelineScreenState extends State<TimelineScreen>
                         ],
                       )
                     else if (isFuture)
-                      const Text(
-                        'waiting',
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.waitingLabel,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: T.ink4,
                           fontStyle: FontStyle.italic,
                         ),
                       )
                     else
-                      const Text(
-                        'Tap to add',
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.tapToAdd,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: T.ink3,
                           fontStyle: FontStyle.italic,
@@ -779,12 +780,12 @@ class _TimelineScreenState extends State<TimelineScreen>
               ),
             ),
 
-            // Right: photo thumbnail
+            // End: photo thumbnail
             ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
+              borderRadius: BorderRadiusDirectional.only(
+                topEnd: const Radius.circular(16),
+                bottomEnd: const Radius.circular(16),
+              ).resolve(Directionality.of(context)),
               child: SizedBox(
                 width: 88,
                 height: 88,
@@ -859,13 +860,19 @@ class _TimelineScreenState extends State<TimelineScreen>
             Expanded(
               child: Text(
                 _importing
-                    ? 'Importing photos…'
-                    : 'Import existing photos to fill in past years.',
+                    ? AppLocalizations.of(context)!.importingPhotos
+                    : AppLocalizations.of(context)!.importNudgeText,
                 style: const TextStyle(fontSize: 13, color: T.forest),
               ),
             ),
             if (!_importing)
-              const Icon(Icons.chevron_right, color: T.forest, size: 18),
+              Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.chevron_left
+                    : Icons.chevron_right,
+                color: T.forest,
+                size: 18,
+              ),
           ],
         ),
       ),
@@ -904,7 +911,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   Widget build(BuildContext context) {
     if (_loading || _child == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Timeline')),
+        appBar: AppBar(title: Text(AppLocalizations.of(context)!.timelineTitle)),
         body: _buildShimmerSkeleton(),
       );
     }
@@ -969,11 +976,11 @@ class _TimelineScreenState extends State<TimelineScreen>
               ),
             ),
 
-          // "THE JOURNEY" section label
+          // Section label
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _buildSectionLabel('THE JOURNEY'),
+              child: _buildSectionLabel(AppLocalizations.of(context)!.theJourney),
             ),
           ),
 
@@ -1200,8 +1207,11 @@ class _StoriesPhotoViewerState extends State<_StoriesPhotoViewer>
   }
 
   String _getYearLabel(int year) {
+    final l10n = AppLocalizations.of(context)!;
     final gregorian = widget.birthYear + year;
-    return year == 0 ? 'Birth • $gregorian' : 'Year $year • $gregorian';
+    return year == 0
+        ? '${l10n.birth} • $gregorian'
+        : '${l10n.yearN(year)} • $gregorian';
   }
 
   void _onVerticalDragUpdate(DragUpdateDetails d) {
@@ -1373,7 +1383,7 @@ class _StoriesPhotoViewerState extends State<_StoriesPhotoViewer>
                         const SizedBox(height: 12),
                         if (!_isDragging)
                           Text(
-                            'Swipe down to close',
+                            AppLocalizations.of(context)!.swipeDownToClose,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.4),
                               fontSize: 12),

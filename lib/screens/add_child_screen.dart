@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/child.dart';
@@ -78,9 +79,10 @@ class _AddChildScreenState extends State<AddChildScreen> {
   void _save() {
     if (!_canSave) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final normalized = _name.toLowerCase();
     if (widget.existingNames.contains(normalized)) {
-      setState(() => _error = 'This name already exists.');
+      setState(() => _error = l10n.nameAlreadyExists);
       return;
     }
 
@@ -106,13 +108,15 @@ class _AddChildScreenState extends State<AddChildScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'New Child',
+          AppLocalizations.of(context)!.newChildTitle,
           style: serif(fontSize: 17, fontWeight: FontWeight.w600),
         ),
         elevation: 0,
       ),
       body: SafeArea(
-        child: Padding(
+        child: Builder(builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return Padding(
           padding: const EdgeInsets.fromLTRB(28, 12, 28, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,7 +128,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
                     children: [
                       // ── Serif heading ──────────────────────────────────────
                       Text(
-                        'A new chapter',
+                        l10n.aNewChapter,
                         style: serif(
                           fontSize: 36,
                           fontWeight: FontWeight.w400,
@@ -133,7 +137,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
                         ),
                       ),
                       Text(
-                        'begins.',
+                        l10n.begins,
                         style: serif(
                           fontSize: 36,
                           fontWeight: FontWeight.w600,
@@ -147,7 +151,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
                       // ── Name field (borderless) ────────────────────────────
                       Text(
-                        'NAME',
+                        l10n.nameLabel,
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -167,7 +171,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
                         ),
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: "Child's name",
+                          hintText: l10n.childNameHint,
                           hintStyle: serif(
                             fontSize: 28,
                             fontWeight: FontWeight.w600,
@@ -186,7 +190,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
                       // ── Birth date (underline field) ───────────────────────
                       Text(
-                        'BIRTH DATE',
+                        l10n.birthDateLabel,
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -209,7 +213,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
                               Expanded(
                                 child: Text(
                                   _birthDate == null
-                                      ? 'Select birth date'
+                                      ? l10n.selectBirthDate
                                       : _formattedDate,
                                   style: TextStyle(
                                     fontSize: 17,
@@ -258,8 +262,8 @@ class _AddChildScreenState extends State<AddChildScreen> {
                                 const SizedBox(width: 6),
                                 Text(
                                   _name.isNotEmpty
-                                      ? "Begin $_name's story"
-                                      : "Begin their story",
+                                      ? l10n.beginStory(_name)
+                                      : l10n.beginTheirStory,
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: T.forest,
@@ -298,8 +302,8 @@ class _AddChildScreenState extends State<AddChildScreen> {
                         )
                       : Text(
                           _name.isNotEmpty
-                              ? "Begin $_name's story"
-                              : "Begin their story",
+                              ? l10n.beginStory(_name)
+                              : l10n.beginTheirStory,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -310,7 +314,8 @@ class _AddChildScreenState extends State<AddChildScreen> {
               ),
             ],
           ),
-        ),
+        );
+        }),
       ),
     );
   }

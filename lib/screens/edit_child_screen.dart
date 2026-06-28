@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/child.dart';
@@ -105,12 +106,13 @@ class _EditChildScreenState extends State<EditChildScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final birthText = _birthDate == null
-        ? 'Not selected'
+        ? l10n.editChildNotSelected
         : _birthDate!.toIso8601String().split('T').first;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Child')),
+      appBar: AppBar(title: Text(l10n.editChildTitle)),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -118,16 +120,14 @@ class _EditChildScreenState extends State<EditChildScreen> {
           children: [
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Child name'),
+              decoration: InputDecoration(labelText: l10n.editChildNameLabel),
             ),
             const SizedBox(height: 20),
             OutlinedButton.icon(
               onPressed: _saving ? null : _pickBirthDate,
               icon: const Icon(Icons.calendar_today),
               label: Text(
-                _birthDate == null
-                    ? 'Select birth date'
-                    : birthText,
+                _birthDate == null ? l10n.selectBirthDate : birthText,
               ),
             ),
             const Spacer(),
@@ -141,7 +141,7 @@ class _EditChildScreenState extends State<EditChildScreen> {
                         width: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Save'),
+                    : Text(l10n.saveAction),
               ),
             ),
           ],

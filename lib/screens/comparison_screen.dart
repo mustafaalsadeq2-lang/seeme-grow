@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/child.dart';
 import '../storage/local_storage_service.dart';
 import '../utils/app_tokens.dart';
@@ -38,7 +39,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
   late int _rightYear;
   bool _isSaving = false;
 
-  final GlobalKey _repaintKey = GlobalKey();
+  final GlobalKey _repaintKey  = GlobalKey();
+  final GlobalKey _shareButtonKey = GlobalKey();
 
   late AnimationController _entryController;
   late Animation<double> _cardEntry;
@@ -125,7 +127,9 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     return File(path).existsSync();
   }
 
-  String _yearLabel(int year)    => year == 0 ? 'Birth' : 'Age $year';
+  String _yearLabel(int year) => year == 0
+      ? AppLocalizations.of(context)!.birth
+      : AppLocalizations.of(context)!.ageN(year);
   String _calendarYear(int year) => (_child!.birthDate.year + year).toString();
 
   // ── Save image ────────────────────────────────────────────────────────────
@@ -144,9 +148,15 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       final file = File('${dir.path}/compare_${widget.childId}_$ts.png');
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
+      final box = _shareButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      final origin = box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : const Rect.fromLTWH(0, 0, 1, 1);
+
       await Share.shareXFiles(
         [XFile(file.path)],
         text: '${widget.childName} – Growth Comparison | SeeMeGrow',
+        sharePositionOrigin: origin,
       );
 
       HapticFeedback.mediumImpact();
@@ -154,7 +164,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not save image: $e'),
+            content: Text(AppLocalizations.of(context)!.couldNotSaveImage(e.toString())),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -198,14 +208,14 @@ class _ComparisonScreenState extends State<ComparisonScreen>
               Icon(Icons.compare_arrows, size: 64, color: T.ink4),
               const SizedBox(height: 16),
               Text(
-                'Add at least 2 photos\nto compare growth',
+                AppLocalizations.of(context)!.addPhotosToCompare,
                 textAlign: TextAlign.center,
                 style: serif(fontSize: 17, color: T.ink3),
               ),
               const SizedBox(height: 24),
               OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Go Back'),
+                child: Text(AppLocalizations.of(context)!.goBack),
               ),
             ],
           ),
@@ -316,7 +326,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
             itemBuilder: (_, year) {
               final hasPhoto  = _yearHasPhoto(year);
               final isSelected= selectedYear == year;
-              final chipLabel = year == 0 ? 'Birth' : '$year';
+              final chipLabel = year == 0 ? AppLocalizations.of(context)!.birth : '$year';
 
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -507,13 +517,13 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                 child: Column(
                   children: [
                     _buildChipRow(
-                      label: 'BEFORE',
+                      label: AppLocalizations.of(context)!.compareBeforeLabel,
                       selectedYear: _leftYear,
                       onSelected: (y) => setState(() => _leftYear = y),
                     ),
                     const SizedBox(height: 12),
                     _buildChipRow(
-                      label: 'AFTER',
+                      label: AppLocalizations.of(context)!.compareAfterLabel,
                       selectedYear: _rightYear,
                       onSelected: (y) => setState(() => _rightYear = y),
                     ),
@@ -553,6 +563,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
   Widget _buildSaveButton() {
     return Container(
+      key: _shareButtonKey,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [_kGradStart, _kGradEnd],
@@ -582,15 +593,15 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                       strokeWidth: 2.5,
                     ),
                   )
-                : const Row(
+                : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.download_outlined,
+                      const Icon(Icons.download_outlined,
                           color: Colors.white, size: 20),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
-                        'Save image',
-                        style: TextStyle(
+                        AppLocalizations.of(context)!.saveImage,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,

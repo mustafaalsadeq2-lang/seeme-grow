@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -378,23 +379,21 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _deleteChild(Child child) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remove child'),
-        content: Text(
-          'This will permanently delete all memories for ${child.name}.\n'
-          'This action cannot be undone.',
-        ),
+        title: Text(l10n.removeChildTitle),
+        content: Text(l10n.removeChildConfirm(child.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove'),
+            child: Text(l10n.remove),
           ),
         ],
       ),
@@ -425,22 +424,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ── UI helpers ────────────────────────────────────────────────────────────
 
-  static const _quotes = [
-    'Every moment with your child is a memory worth keeping.',
-    'Children grow so fast — capture every smile.',
-    'The littlest feet make the biggest footprints in our hearts.',
-    'A child’s laughter is the best sound in the world.',
-    'Today’s little moments become tomorrow’s precious memories.',
-    'Watching you grow is the greatest adventure.',
-    'Every day is a new chapter in your child’s story.',
-    'The best thing to spend on your child is time.',
-    'In the eyes of a child, you will see the world as it should be.',
-    'Childhood is a short season — make it sweet.',
-    'One day you’ll look back and realize these were the big moments.',
-    'Growth is a journey best measured in love.',
-    'Small hands, big dreams — capture them all.',
-    'The days are long but the years are short.',
-    'Every photo tells a story of how much they’ve grown.',
+  List<String> _quotes(AppLocalizations l10n) => [
+    l10n.quote01, l10n.quote02, l10n.quote03, l10n.quote04, l10n.quote05,
+    l10n.quote06, l10n.quote07, l10n.quote08, l10n.quote09, l10n.quote10,
+    l10n.quote11, l10n.quote12, l10n.quote13, l10n.quote14, l10n.quote15,
   ];
 
   Color _avatarColor(String localId) {
@@ -452,10 +439,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   String _greeting() {
+    final l10n = AppLocalizations.of(context)!;
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning!';
-    if (hour < 17) return 'Good Afternoon!';
-    return 'Good Evening!';
+    if (hour < 12) return l10n.goodMorning;
+    if (hour < 17) return l10n.goodAfternoon;
+    return l10n.goodEvening;
   }
 
   int _totalMemories() {
@@ -498,9 +486,11 @@ class _HomeScreenState extends State<HomeScreen>
       .length;
 
   String _dailyQuote() {
+    final l10n      = AppLocalizations.of(context)!;
+    final quotes    = _quotes(l10n);
     final now       = DateTime.now();
     final dayOfYear = now.difference(DateTime(now.year)).inDays;
-    return _quotes[dayOfYear % _quotes.length];
+    return quotes[dayOfYear % quotes.length];
   }
 
   // ── Animations ────────────────────────────────────────────────────────────
@@ -578,22 +568,25 @@ class _HomeScreenState extends State<HomeScreen>
                 );
               }
             },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'settings',
-                child: Text('Settings'),
-              ),
-              if (_isEffectivelySignedIn)
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Text('Logout', style: TextStyle(color: Colors.red)),
-                )
-              else
-                const PopupMenuItem(
-                  value: 'signin',
-                  child: Text('Sign In'),
+            itemBuilder: (_) {
+              final l10n = AppLocalizations.of(context)!;
+              return [
+                PopupMenuItem(
+                  value: 'settings',
+                  child: Text(l10n.settingsAction),
                 ),
-            ],
+                if (_isEffectivelySignedIn)
+                  PopupMenuItem(
+                    value: 'logout',
+                    child: Text(l10n.logoutAction, style: const TextStyle(color: Colors.red)),
+                  )
+                else
+                  PopupMenuItem(
+                    value: 'signin',
+                    child: Text(l10n.signInAction),
+                  ),
+              ];
+            },
             child: CircleAvatar(
               radius: 18,
               backgroundColor: _isEffectivelySignedIn
@@ -646,7 +639,7 @@ class _HomeScreenState extends State<HomeScreen>
             const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Text(
-              'Add Child',
+              AppLocalizations.of(context)!.addChild,
               style: serif(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -704,6 +697,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildGreeting() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return _animatedSlide(
       _stagger(0.0, 0.4),
       Column(
@@ -719,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 4),
           Text(
-            "Here's your family overview",
+            l10n.familyOverview,
             style: TextStyle(
               fontSize: 14,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -748,12 +742,12 @@ class _HomeScreenState extends State<HomeScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _statColumn(Icons.child_care, '${_children.length}', 'Children', theme),
-            _statColumn(Icons.photo_library_outlined, '$memories', 'Memories', theme),
+            _statColumn(Icons.child_care, '${_children.length}', AppLocalizations.of(context)!.childrenLabel, theme),
+            _statColumn(Icons.photo_library_outlined, '$memories', AppLocalizations.of(context)!.memoriesLabel, theme),
             _statColumn(
               Icons.cake_outlined,
               nextBday != null ? '$nextBday' : '-',
-              nextBday != null ? 'Days to B-day' : 'No birthday',
+              nextBday != null ? AppLocalizations.of(context)!.daysToBirthday : AppLocalizations.of(context)!.noBirthday,
               theme,
             ),
           ],
@@ -792,6 +786,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildChildCard(Child child, int index) {
     final theme    = Theme.of(context);
+    final l10n     = AppLocalizations.of(context)!;
     final age      = AgeCalculator.currentAge(child.birthDate);
     final photo    = _latestPhoto(child);
     final memories = _memoryCount(child);
@@ -852,7 +847,7 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        age.toString(),
+                        age.format(l10n),
                         style: TextStyle(
                           fontSize: 13,
                           color: theme.colorScheme.onSurface
@@ -861,7 +856,10 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '$memories ${memories == 1 ? 'memory' : 'memories'}',
+                        () {
+                          final l10n = AppLocalizations.of(context)!;
+                          return '$memories ${memories == 1 ? l10n.memorySingular : l10n.memoriesPlural}';
+                        }(),
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurface
@@ -876,13 +874,16 @@ class _HomeScreenState extends State<HomeScreen>
                     if (value == 'edit') { _editChild(child); }
                     else if (value == 'delete') { _deleteChild(child); }
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
+                  itemBuilder: (_) {
+                    final l10n = AppLocalizations.of(context)!;
+                    return [
+                      PopupMenuItem(value: 'edit', child: Text(l10n.editAction)),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(l10n.deleteAction, style: const TextStyle(color: Colors.red)),
+                      ),
+                    ];
+                  },
                 ),
               ],
             ),
@@ -918,6 +919,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildEmptyState() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -940,7 +942,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
             const SizedBox(height: 20),
             Text(
-              'No children added yet',
+              l10n.noChildrenYet,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
@@ -949,7 +951,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
             const SizedBox(height: 12),
             Text(
-              'Start by adding your child to begin\ncapturing their growth journey.',
+              l10n.startByAdding,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -969,9 +971,9 @@ class _HomeScreenState extends State<HomeScreen>
             if (_isGuest) ...[
               const SizedBox(height: 24),
               Text(
-                'Sign in to keep your account ready.',
+                l10n.signInToKeep,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 13,
                   color: T.forest,
                   fontWeight: FontWeight.w500,

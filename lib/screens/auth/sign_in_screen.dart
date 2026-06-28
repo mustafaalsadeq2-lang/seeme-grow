@@ -123,7 +123,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     final validationError = _validateEmail(email);
     if (validationError != null) {
-      setState(() => _emailError = validationError);
+      setState(() => _emailError = l10n.signInEmailError);
       return;
     }
     setState(() => _emailError = null);
@@ -220,9 +220,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     TextSpan(
                       style: serif(fontSize: 40, height: 1.05, letterSpacing: -0.6),
                       children: [
-                        const TextSpan(text: 'Welcome '),
+                        TextSpan(text: l10n.signInWelcome1),
                         TextSpan(
-                          text: 'back.',
+                          text: l10n.signInWelcome2,
                           style: serif(fontSize: 40, italic: true, color: T.forest, height: 1.05),
                         ),
                       ],
@@ -230,10 +230,10 @@ class _SignInScreenState extends State<SignInScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Sign in to keep their story safe across devices.',
+                  Text(
+                    l10n.signInSubtitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: T.ink3, height: 1.5),
+                    style: const TextStyle(fontSize: 14, color: T.ink3, height: 1.5),
                   ),
 
                   const SizedBox(height: 44),
@@ -305,7 +305,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             )
                           : Text(
                               inCooldown
-                                  ? 'You can request another code in ${_cooldownSeconds}s'
+                                  ? l10n.signInCooldown(_cooldownSeconds)
                                   : l10n.sendVerificationCode,
                               textDirection: TextDirection.ltr,
                               style: const TextStyle(
@@ -323,7 +323,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         const Expanded(child: Divider(color: T.hairline)),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('or', style: serif(fontSize: 14, italic: true, color: T.ink3)),
+                          child: Text(l10n.signInOr, style: serif(fontSize: 14, italic: true, color: T.ink3)),
                         ),
                         const Expanded(child: Divider(color: T.hairline)),
                       ],
@@ -360,11 +360,11 @@ class _SignInScreenState extends State<SignInScreen> {
                   onTap: _continueAsGuest,
                   child: Text.rich(
                     TextSpan(
-                      text: 'Just exploring? ',
+                      text: l10n.signInJustExploring,
                       style: const TextStyle(fontSize: 13, color: T.ink3),
                       children: [
                         TextSpan(
-                          text: 'Continue as guest',
+                          text: l10n.signInContinueAsGuestLink,
                           style: const TextStyle(color: T.forest, fontWeight: FontWeight.w600),
                         ),
                       ],

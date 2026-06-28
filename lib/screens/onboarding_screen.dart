@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/app_tokens.dart';
@@ -77,6 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final isLast = _page == _totalPages - 1;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: T.bg,
@@ -85,7 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           children: [
             // ── Skip ─────────────────────────────────────────────────────────
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(0, 12, 20, 0),
                 child: AnimatedOpacity(
@@ -94,7 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   child: GestureDetector(
                     onTap: _complete,
                     child: Text(
-                      'Skip',
+                      l10n.onbSkip,
                       style: TextStyle(
                         fontSize: 14,
                         color: T.ink3,
@@ -152,7 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                   ),
                   child: Text(
-                    isLast ? 'Get Started' : 'Continue',
+                    isLast ? l10n.onbGetStarted : l10n.continueAction,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -179,6 +181,7 @@ class _Page1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
@@ -210,7 +213,7 @@ class _Page1 extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'A childhood,',
+                    l10n.onb1Title1,
                     style: serif(
                       fontSize: 34,
                       fontWeight: FontWeight.w400,
@@ -223,7 +226,7 @@ class _Page1 extends StatelessWidget {
                     TextSpan(
                       children: [
                         TextSpan(
-                          text: 'in nineteen frames.',
+                          text: l10n.onb1Title2,
                           style: serif(
                             fontSize: 34,
                             fontWeight: FontWeight.w600,
@@ -238,7 +241,7 @@ class _Page1 extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'One photo per year,\nfrom birth to eighteen.',
+                    l10n.onb1Subtitle,
                     style: TextStyle(
                       fontSize: 15,
                       color: T.ink3,
@@ -356,14 +359,14 @@ class _Polaroid extends StatelessWidget {
 class _Page2 extends StatelessWidget {
   const _Page2();
 
-  static const _features = [
-    (Icons.photo_camera_outlined, 'One photo per year', 'Capture a single moment — no clutter, just growth.'),
-    (Icons.timeline_outlined, '19 year journey', 'From birth to eighteen, all in one place.'),
-    (Icons.compare_arrows_outlined, 'See them grow', 'Compare any two years side by side.'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final features = [
+      (Icons.photo_camera_outlined, l10n.onb2Feature1Title, l10n.onb2Feature1Body),
+      (Icons.timeline_outlined,     l10n.onb2Feature2Title, l10n.onb2Feature2Body),
+      (Icons.compare_arrows_outlined, l10n.onb2Feature3Title, l10n.onb2Feature3Body),
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
@@ -371,7 +374,7 @@ class _Page2 extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
           Text(
-            'Everything they need.',
+            l10n.onb2Title1,
             style: serif(
               fontSize: 32,
               fontWeight: FontWeight.w600,
@@ -382,7 +385,7 @@ class _Page2 extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           Text(
-            "Nothing they don't.",
+            l10n.onb2Title2,
             style: serif(
               fontSize: 32,
               fontWeight: FontWeight.w400,
@@ -392,7 +395,7 @@ class _Page2 extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-          ..._features.map((f) => _FeatureRow(
+          ...features.map((f) => _FeatureRow(
             icon: f.$1,
             title: f.$2,
             body: f.$3,
@@ -467,6 +470,7 @@ class _Page3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
@@ -475,7 +479,7 @@ class _Page3 extends StatelessWidget {
           const AppMark(size: 64),
           const SizedBox(height: 32),
           Text(
-            'Their story,',
+            l10n.onb3Title1,
             style: serif(
               fontSize: 36,
               fontWeight: FontWeight.w400,
@@ -485,7 +489,7 @@ class _Page3 extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           Text(
-            'forever.',
+            l10n.onb3Title2,
             style: serif(
               fontSize: 36,
               fontWeight: FontWeight.w600,
@@ -497,7 +501,7 @@ class _Page3 extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Sign in to keep their memories\nsafe across all your devices.',
+            l10n.onb3Subtitle,
             style: TextStyle(
               fontSize: 15,
               color: T.ink3,

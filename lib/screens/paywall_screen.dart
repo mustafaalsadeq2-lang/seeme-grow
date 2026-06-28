@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seeme_grow_clean/l10n/app_localizations.dart';
 
 import '../utils/app_tokens.dart';
 
@@ -7,6 +8,7 @@ class PaywallScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -27,7 +29,7 @@ class PaywallScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               Text(
-                'SeeMeGrow is free\nduring early access.',
+                l10n.earlyAccessTitle,
                 style: serif(
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
@@ -39,10 +41,10 @@ class PaywallScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              const Text(
-                "We're focusing on making the experience\nstable and useful for families first.",
+              Text(
+                l10n.earlyAccessSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: T.ink3, height: 1.6),
+                style: const TextStyle(fontSize: 15, color: T.ink3, height: 1.6),
               ),
 
               const Spacer(),
@@ -58,9 +60,9 @@ class PaywallScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Continue',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.continueAction,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,

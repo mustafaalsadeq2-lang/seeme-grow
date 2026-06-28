@@ -45,15 +45,6 @@ class _YearDetailScreenState extends State<YearDetailScreen>
     'mp4', 'mov', 'avi', 'mkv', 'm4v', '3gp', 'webm', 'flv', 'wmv',
   };
 
-  // Year names spelled out for the serif heading.
-  static const _yearNames = [
-    'Birth',
-    'Year One',   'Year Two',       'Year Three',    'Year Four',
-    'Year Five',  'Year Six',       'Year Seven',    'Year Eight',
-    'Year Nine',  'Year Ten',       'Year Eleven',   'Year Twelve',
-    'Year Thirteen', 'Year Fourteen', 'Year Fifteen', 'Year Sixteen',
-    'Year Seventeen', 'Year Eighteen',
-  ];
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -224,7 +215,7 @@ class _YearDetailScreenState extends State<YearDetailScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('✨ Memory saved', textAlign: TextAlign.center),
+          content: Text(AppLocalizations.of(context)!.memorySavedPhoto, textAlign: TextAlign.center),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -235,7 +226,7 @@ class _YearDetailScreenState extends State<YearDetailScreen>
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save photo: $e'),
+          content: Text(AppLocalizations.of(context)!.failedToSavePhoto(e.toString())),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -275,8 +266,8 @@ class _YearDetailScreenState extends State<YearDetailScreen>
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   String get _yearHeading {
-    final idx = widget.year.clamp(0, _yearNames.length - 1);
-    return '${_yearNames[idx]}.';
+    final l10n = AppLocalizations.of(context)!;
+    return widget.year == 0 ? '${l10n.birth}.' : '${l10n.yearN(widget.year)}.';
   }
 
   String _calYear() =>
@@ -332,7 +323,7 @@ class _YearDetailScreenState extends State<YearDetailScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            'Tap to add a photo',
+            AppLocalizations.of(context)!.tapToAddPhoto,
             style: serif(fontSize: 16, color: Colors.white60),
           ),
         ],
@@ -441,7 +432,9 @@ class _YearDetailScreenState extends State<YearDetailScreen>
                     ),
                     const SizedBox(width: 24),
                     Text(
-                      widget.year == 0 ? 'Birth' : 'Year ${widget.year}',
+                      widget.year == 0
+                          ? AppLocalizations.of(context)!.birth
+                          : AppLocalizations.of(context)!.yearN(widget.year),
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
@@ -506,19 +499,19 @@ class _PhotoSourceSheet extends StatelessWidget {
             const SizedBox(height: 16),
             _SheetTile(
               icon: Icons.camera_alt_outlined,
-              label: 'Take Photo',
+              label: AppLocalizations.of(context)!.takePhoto,
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             const Divider(height: 1, color: Colors.white10),
             _SheetTile(
               icon: Icons.photo_library_outlined,
-              label: 'Choose from Gallery',
+              label: AppLocalizations.of(context)!.chooseFromGallery,
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             const Divider(height: 1, color: Colors.white10),
             _SheetTile(
               icon: Icons.close,
-              label: 'Cancel',
+              label: AppLocalizations.of(context)!.cancel,
               color: Colors.white38,
               onTap: () => Navigator.pop(context),
             ),
