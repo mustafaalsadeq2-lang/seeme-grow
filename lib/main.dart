@@ -1,61 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import 'config/supabase_config.dart';
-import 'screens/auth/auth_gate.dart';
-
-const _keyDarkMode = 'dark_mode';
-
-final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
 Future<void> main() async {
+  debugPrint('🚀 [main] Starting app...');
+
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('🚀 [main] WidgetsBinding initialized');
 
-  // 🔐 Load environment variables
-  await dotenv.load(fileName: '.env');
+  try {
+    debugPrint('🚀 [main] Loading .env...');
+    await dotenv.load(fileName: '.env');
+    debugPrint('🚀 [main] .env loaded successfully');
 
-  // 🔹 Initialize Supabase securely
-  await SupabaseConfig.initialize();
-
-  // 🌗 Load theme preference
-  final prefs = await SharedPreferences.getInstance();
-  final isDark = prefs.getBool(_keyDarkMode) ?? false;
-  themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
-
-  runApp(const ProviderScope(child: SeeMeGrowApp()));
-}
-
-class SeeMeGrowApp extends StatelessWidget {
-  const SeeMeGrowApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (_, mode, __) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'SeeMeGrow',
-          themeMode: mode,
-          theme: ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.light,
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-            scaffoldBackgroundColor: const Color(0xFFF7F7F8),
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.dark,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.teal,
-              brightness: Brightness.dark,
+    debugPrint('🚀 [main] Running app...');
+    runApp(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Container(
+            color: Colors.white,
+            child: const Center(
+              child: Text(
+                'SEEME GROW',
+                style: TextStyle(fontSize: 24, color: Colors.black),
+              ),
             ),
           ),
-          home: const AuthGate(),
-        );
-      },
+        ),
+      ),
     );
+  } catch (e, stack) {
+    debugPrint('❌ [main] Error during initialization: $e');
+    debugPrint('❌ [main] Stack trace: $stack');
+    runApp(MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.red.shade100,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Startup Error:\n$e',
+              style: const TextStyle(color: Colors.red, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    ));
   }
 }

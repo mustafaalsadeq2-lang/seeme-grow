@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../main.dart';
 import '../services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,13 +13,10 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
-  bool _darkMode = false;
-
   @override
   void initState() {
     super.initState();
     _loadNotificationSettings();
-    _loadDarkMode();
   }
 
   Future<void> _loadNotificationSettings() async {
@@ -33,19 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _toggleNotifications(bool value) async {
     setState(() => _notificationsEnabled = value);
     await NotificationService.setEnabled(value);
-  }
-
-  Future<void> _loadDarkMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() => _darkMode = prefs.getBool('dark_mode') ?? false);
-  }
-
-  Future<void> _toggleDarkMode(bool value) async {
-    setState(() => _darkMode = value);
-    themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('dark_mode', value);
   }
 
   Future<void> _launchUrl(String url) async {
@@ -130,19 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 12),
 
-          // 🔹 Dark Mode
-          _SettingsCard(
-            icon: Icons.dark_mode_outlined,
-            title: 'Dark Mode',
-            subtitle: 'Switch to dark theme',
-            trailing: Switch(
-              value: _darkMode,
-              onChanged: _toggleDarkMode,
-            ),
-            onTap: null,
-          ),
-
-          const SizedBox(height: 12),
+          // 🔹 Dark Mode — temporarily disabled (will restore with ProviderScope)
 
           // 🔹 Notifications
           _SettingsCard(
